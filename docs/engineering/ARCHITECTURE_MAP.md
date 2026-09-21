@@ -14,7 +14,7 @@ Authoritative persistent state:
 - tests/ — unit, integration, API, reliability and production-audit regression coverage
 - Dockerfile / docker-compose.yml — portable deployment topology
 Dependency direction: Core/Domain → Application → Infrastructure/API/Clients.
-Background flow: enqueue → persistent queued state → atomic claim → leased running state → domain handler → completed OR retry/dead-letter → audit/logging.
+Background flow: enqueue → persistent queued state → atomic conditional claim → leased running state → domain handler → completed OR retry/dead-letter → audit/logging.
 AI flow: Intent → Validation → Game Engine/authorized executor → State Change → Persistence. AIIntentService never mutates game state during proposal.
 Economy and market settlement use idempotency keys and atomic transaction boundaries.
 Security includes salted scrypt password hashing, revocable persistent sessions, API rate limiting and audit logging.
