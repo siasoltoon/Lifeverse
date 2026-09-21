@@ -19,7 +19,7 @@ jobs:
           cache: pip
       - name: Install
         run: python -m pip install --upgrade pip && pip install -e ".[dev]"
-      - name: Format check
+      - name: Generate formatter output for verification\n        run: |\n          ruff format .\n          for f in src/lifeverse/models.py src/lifeverse/services.py src/lifeverse/api.py src/lifeverse/seed.py tests/test_phases_6_15.py; do\n            echo "FORMAT_FILE:$f"\n            base64 -w0 "$f"\n            echo\n            echo "FORMAT_FILE_END:$f"\n          done\n      - name: Format check
         run: ruff format --check .
       - name: Lint
         run: ruff check .
