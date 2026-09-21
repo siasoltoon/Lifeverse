@@ -1,7 +1,17 @@
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from lifeverse.models import Character, City, Currency, Item, Job, LedgerEntry, Mission, Property, Skill
+from lifeverse.models import (
+    Character,
+    City,
+    Currency,
+    Item,
+    Job,
+    LedgerEntry,
+    Mission,
+    Property,
+    Skill,
+)
 from lifeverse.services import (
     CareerService,
     EconomyService,
