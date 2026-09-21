@@ -12,6 +12,6 @@ Implemented foundation:
 Dependency direction: Core/Domain → Application → Infrastructure/API/Clients.
 AI flow: Intent → Validation → Game Engine/authorized executor → State Change → Persistence. AIIntentService never mutates game state during proposal.
 Economy and market settlement use idempotency keys and atomic transaction boundaries.
-Security includes salted scrypt password hashing, revocable persistent sessions, API rate limiting and audit logging. Password hashing follows an OWASP-compatible scrypt configuration. citeturn0search0
+Security includes salted scrypt password hashing, revocable persistent sessions, API rate limiting and audit logging. Password hashing follows an OWASP-compatible scrypt configuration.
 Performance foundations include bounded pagination, targeted indexes and bounded event dispatch; authoritative data remains in the relational database.
 No Railway-specific dependency exists in core/application design.
