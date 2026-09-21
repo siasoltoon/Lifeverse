@@ -34,7 +34,16 @@ from .models import (
 
 
 class EventService:
-    CATEGORIES = {"world", "city", "economic", "social", "random", "scheduled", "seasonal", "player"}
+    CATEGORIES = {
+        "world",
+        "city",
+        "economic",
+        "social",
+        "random",
+        "scheduled",
+        "seasonal",
+        "player",
+    }
 
     def define(self, s, code, name, category, repeatable=False, cooldown_seconds=0):
         if category not in self.CATEGORIES:
@@ -91,14 +100,16 @@ class EventService:
         for row in rows:
             row.state = "processed"
             row.version += 1
-            s.add(AuditLog(
-                actor_type="system",
-                actor_id=None,
-                action="event.dispatch",
-                entity_type="game_event",
-                entity_id=str(row.id),
-                details=row.payload,
-            ))
+            s.add(
+                AuditLog(
+                    actor_type="system",
+                    actor_id=None,
+                    action="event.dispatch",
+                    entity_type="game_event",
+                    entity_id=str(row.id),
+                    details=row.payload,
+                )
+            )
         s.commit()
         return rows
 
@@ -110,16 +121,27 @@ class EventService:
         event_type = rng.choice(choices)
         return self.schedule(s, f"{scope}:{event_type}", when, {"seed": seed, "scope": scope})
 
-
     def seasonal(self, s, year, season, payload=None):
         if season not in {"spring", "summer", "autumn", "winter"}:
             raise ValueError("invalid season")
-        when = datetime(year, {"spring": 3, "summer": 6, "autumn": 9, "winter": 12}[season], 1, tzinfo=UTC)
+        when = datetime(
+            year, {"spring": 3, "summer": 6, "autumn": 9, "winter": 12}[season], 1, tzinfo=UTC
+        )
         return self.schedule(s, f"seasonal:{season}", when, payload)
 
 
 class BusinessService:
-    def create(self, s, owner_character_id, city_id, name, kind, currency_id, capital=Decimal("0"), economy=None):
+    def create(
+        self,
+        s,
+        owner_character_id,
+        city_id,
+        name,
+        kind,
+        currency_id,
+        capital=Decimal("0"),
+        economy=None,
+    ):
         if not s.get(Character, owner_character_id):
             raise ValueError("owner not found")
         if capital > 0:
@@ -128,7 +150,13 @@ class BusinessService:
             wallet = s.scalar(select(Wallet).where(Wallet.character_id == owner_character_id))
             if not wallet or wallet.currency_id != currency_id:
                 raise ValueError("owner wallet currency mismatch")
-            economy._apply_move(s, owner_character_id, -Decimal(str(capital)), f"business-capital:{owner_character_id}:{name}", "business capital")
+            economy._apply_move(
+                s,
+                owner_character_id,
+                -Decimal(str(capital)),
+                f"business-capital:{owner_character_id}:{name}",
+                "business capital",
+            )
         row = Business(
             owner_character_id=owner_character_id,
             city_id=city_id,
@@ -159,9 +187,13 @@ class BusinessService:
         business = s.get(Business, business_id)
         if not business:
             raise ValueError("business not found")
-        employees = list(s.scalars(select(BusinessEmployee).where(
-            BusinessEmployee.business_id == business_id, BusinessEmployee.status == "active"
-        )))
+        employees = list(
+            s.scalars(
+                select(BusinessEmployee).where(
+                    BusinessEmployee.business_id == business_id, BusinessEmployee.status == "active"
+                )
+            )
+        )
         total = sum((e.wage for e in employees), Decimal("0"))
         if business.balance < total:
             raise ValueError("insufficient business funds")
@@ -172,16 +204,22 @@ class BusinessService:
                 raise ValueError("employee wallet currency mismatch")
             wallet.balance += employee.wage
             key = f"{idempotency_prefix}:{employee.id}"
-            if s.scalar(select(AuditLog).where(AuditLog.action == "business.payroll", AuditLog.details.like(f'%{key}%'))):
+            if s.scalar(
+                select(AuditLog).where(
+                    AuditLog.action == "business.payroll", AuditLog.details.like(f"%{key}%")
+                )
+            ):
                 continue
-            s.add(AuditLog(
-                actor_type="business",
-                actor_id=str(business.id),
-                action="business.payroll",
-                entity_type="character",
-                entity_id=str(employee.character_id),
-                details=json.dumps({"amount": str(employee.wage), "idempotency_key": key}),
-            ))
+            s.add(
+                AuditLog(
+                    actor_type="business",
+                    actor_id=str(business.id),
+                    action="business.payroll",
+                    entity_type="character",
+                    entity_id=str(employee.character_id),
+                    details=json.dumps({"amount": str(employee.wage), "idempotency_key": key}),
+                )
+            )
         s.commit()
         return total
 
@@ -204,7 +242,9 @@ class MarketService:
         return row
 
     def buy(self, s, buyer_character_id, listing_id, quantity, idempotency_key, economy, inventory):
-        existing = s.scalar(select(MarketOrder).where(MarketOrder.idempotency_key == idempotency_key))
+        existing = s.scalar(
+            select(MarketOrder).where(MarketOrder.idempotency_key == idempotency_key)
+        )
         if existing:
             return existing
         listing = s.get(MarketListing, listing_id)
@@ -216,7 +256,9 @@ class MarketService:
             raise ValueError("invalid quantity")
         total = listing.unit_price * quantity
         economy._apply_move(s, buyer_character_id, -total, idempotency_key, "market purchase")
-        economy._apply_move(s, listing.seller_character_id, total, f"{idempotency_key}:seller", "market sale")
+        economy._apply_move(
+            s, listing.seller_character_id, total, f"{idempotency_key}:seller", "market sale"
+        )
         inventory.add_in_session(s, buyer_character_id, listing.item_id, quantity)
         listing.quantity -= quantity
         if listing.quantity == 0:
@@ -294,7 +336,12 @@ class CombatService:
         if row.turn > 10:
             row.state = "completed"
         s.commit()
-        return {"result": result, "attacker_roll": attacker_roll, "defender_roll": defender_roll, "state": row.state}
+        return {
+            "result": result,
+            "attacker_roll": attacker_roll,
+            "defender_roll": defender_roll,
+            "state": row.state,
+        }
 
 
 class AIIntentService:
@@ -305,7 +352,9 @@ class AIIntentService:
             raise ValueError("actor not found")
         if intent_type not in self.ALLOWED:
             raise ValueError("unsupported intent")
-        row = AIIntent(actor_id=actor_id, intent_type=intent_type, payload=json.dumps(payload, sort_keys=True))
+        row = AIIntent(
+            actor_id=actor_id, intent_type=intent_type, payload=json.dumps(payload, sort_keys=True)
+        )
         s.add(row)
         s.commit()
         return row
@@ -341,7 +390,9 @@ class LocalizationService:
     def set(self, s, locale, key, value):
         if locale not in {"fa", "en"}:
             raise ValueError("unsupported locale")
-        row = s.scalar(select(Translation).where(Translation.locale == locale, Translation.key == key))
+        row = s.scalar(
+            select(Translation).where(Translation.locale == locale, Translation.key == key)
+        )
         if not row:
             row = Translation(locale=locale, key=key, value=value)
             s.add(row)
@@ -351,10 +402,14 @@ class LocalizationService:
         return row
 
     def translate(self, s, locale, key, fallback="en"):
-        row = s.scalar(select(Translation).where(Translation.locale == locale, Translation.key == key))
+        row = s.scalar(
+            select(Translation).where(Translation.locale == locale, Translation.key == key)
+        )
         if row:
             return row.value
-        row = s.scalar(select(Translation).where(Translation.locale == fallback, Translation.key == key))
+        row = s.scalar(
+            select(Translation).where(Translation.locale == fallback, Translation.key == key)
+        )
         return row.value if row else key
 
 
@@ -373,13 +428,25 @@ class AntiExploitService:
         return row
 
     def repeated_action(self, s, character_id, action, since, threshold):
-        count = len(list(s.scalars(select(AuditLog).where(
-            AuditLog.actor_id == str(character_id),
-            AuditLog.action == action,
-            AuditLog.created_at >= since,
-        ))))
+        count = len(
+            list(
+                s.scalars(
+                    select(AuditLog).where(
+                        AuditLog.actor_id == str(character_id),
+                        AuditLog.action == action,
+                        AuditLog.created_at >= since,
+                    )
+                )
+            )
+        )
         if count >= threshold:
-            return self.signal(s, character_id, "repeated_action", min(10, count), {"action": action, "count": count})
+            return self.signal(
+                s,
+                character_id,
+                "repeated_action",
+                min(10, count),
+                {"action": action, "count": count},
+            )
         return None
 
 
@@ -428,7 +495,12 @@ class AuthService:
             r=8,
             p=3,
         )
-        account.password_hash = "scrypt$32768$8$3$" + base64.urlsafe_b64encode(salt).decode() + "$" + base64.urlsafe_b64encode(digest).decode()
+        account.password_hash = (
+            "scrypt$32768$8$3$"
+            + base64.urlsafe_b64encode(salt).decode()
+            + "$"
+            + base64.urlsafe_b64encode(digest).decode()
+        )
         s.commit()
         return account
 
@@ -439,7 +511,9 @@ class AuthService:
             _, n, r, p, salt_text, digest_text = account.password_hash.split("$")
             salt = base64.urlsafe_b64decode(salt_text.encode())
             expected = base64.urlsafe_b64decode(digest_text.encode())
-            actual = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=int(n), r=int(r), p=int(p))
+            actual = hashlib.scrypt(
+                password.encode("utf-8"), salt=salt, n=int(n), r=int(r), p=int(p)
+            )
             return hmac.compare_digest(actual, expected)
         except (ValueError, TypeError):
             return False

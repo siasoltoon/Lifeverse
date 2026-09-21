@@ -88,53 +88,119 @@ class TranslationRequest(BaseModel):
 
 @router.post("/events", status_code=201)
 def schedule_event(payload: EventRequest, session: Session = Depends(get_session)):
-    return bad(lambda: {"id": str(events.schedule(session, payload.event_type, payload.scheduled_at, payload.payload).id)})
+    return bad(
+        lambda: {
+            "id": str(
+                events.schedule(
+                    session, payload.event_type, payload.scheduled_at, payload.payload
+                ).id
+            )
+        }
+    )
 
 
 @router.post("/events/dispatch")
 def dispatch_events(session: Session = Depends(get_session)):
-    return bad(lambda: [{"id": str(x.id), "type": x.event_type, "state": x.state} for x in events.dispatch_due(session)])
+    return bad(
+        lambda: [
+            {"id": str(x.id), "type": x.event_type, "state": x.state}
+            for x in events.dispatch_due(session)
+        ]
+    )
 
 
 @router.post("/businesses", status_code=201)
 def create_business(payload: BusinessRequest, session: Session = Depends(get_session)):
-    return bad(lambda: {"id": str(businesses.create(
-        session, payload.owner_character_id, payload.city_id, payload.name, payload.kind, payload.currency_id, payload.capital, economy
-    ).id)})
+    return bad(
+        lambda: {
+            "id": str(
+                businesses.create(
+                    session,
+                    payload.owner_character_id,
+                    payload.city_id,
+                    payload.name,
+                    payload.kind,
+                    payload.currency_id,
+                    payload.capital,
+                    economy,
+                ).id
+            )
+        }
+    )
 
 
 @router.post("/market/listings", status_code=201)
 def create_listing(payload: ListingRequest, session: Session = Depends(get_session)):
-    return bad(lambda: {"id": str(market.list_item(
-        session, payload.seller_character_id, payload.item_id, payload.quantity, payload.unit_price
-    ).id)})
+    return bad(
+        lambda: {
+            "id": str(
+                market.list_item(
+                    session,
+                    payload.seller_character_id,
+                    payload.item_id,
+                    payload.quantity,
+                    payload.unit_price,
+                ).id
+            )
+        }
+    )
 
 
 @router.post("/market/listings/{listing_id}/buy")
-def buy_listing(listing_id: UUID, payload: MarketBuyRequest, session: Session = Depends(get_session)):
-    return bad(lambda: {"id": str(market.buy(
-        session, payload.buyer_character_id, listing_id, payload.quantity, payload.idempotency_key, economy, inventory
-    ).id)})
+def buy_listing(
+    listing_id: UUID, payload: MarketBuyRequest, session: Session = Depends(get_session)
+):
+    return bad(
+        lambda: {
+            "id": str(
+                market.buy(
+                    session,
+                    payload.buyer_character_id,
+                    listing_id,
+                    payload.quantity,
+                    payload.idempotency_key,
+                    economy,
+                    inventory,
+                ).id
+            )
+        }
+    )
 
 
 @router.post("/law/cases", status_code=201)
-def create_case(character_id: UUID, category: str, severity: int, session: Session = Depends(get_session)):
+def create_case(
+    character_id: UUID, category: str, severity: int, session: Session = Depends(get_session)
+):
     return bad(lambda: {"id": str(law.report(session, character_id, category, severity).id)})
 
 
 @router.post("/ai/intents", status_code=201)
 def propose_intent(payload: IntentRequest, session: Session = Depends(get_session)):
-    return bad(lambda: {"id": str(ai_intents.propose(session, payload.actor_id, payload.intent_type, payload.payload).id)})
+    return bad(
+        lambda: {
+            "id": str(
+                ai_intents.propose(
+                    session, payload.actor_id, payload.intent_type, payload.payload
+                ).id
+            )
+        }
+    )
 
 
 @router.post("/ai/intents/{intent_id}/validate")
 def validate_intent(intent_id: UUID, session: Session = Depends(get_session)):
-    return bad(lambda: (lambda row: {"id": str(row.id), "state": row.state})(ai_intents.validate(session, intent_id)))
+    return bad(
+        lambda: (lambda row: {"id": str(row.id), "state": row.state})(
+            ai_intents.validate(session, intent_id)
+        )
+    )
 
 
 @router.post("/localization")
 def set_translation(payload: TranslationRequest, session: Session = Depends(get_session)):
-    return bad(lambda: {"key": localization.set(session, payload.locale, payload.key, payload.value).key})
+    return bad(
+        lambda: {"key": localization.set(session, payload.locale, payload.key, payload.value).key}
+    )
 
 
 @router.get("/localization/{locale}/{key}")
@@ -150,7 +216,13 @@ def ui_config(locale: str = Query("fa"), session: Session = Depends(get_session)
         "locale": locale,
         "fallback_locale": "en",
         "api_version": "v1",
-        "features": {"events": True, "business": True, "market": True, "law": True, "ai_intents": True},
+        "features": {
+            "events": True,
+            "business": True,
+            "market": True,
+            "law": True,
+            "ai_intents": True,
+        },
     }
 
 
@@ -171,9 +243,14 @@ def bearer(authorization: str | None):
 
 @router.post("/auth/login")
 def login(payload: LoginRequest, session: Session = Depends(get_session)):
-    return bad(lambda: (lambda result: {"access_token": result[0], "expires_at": result[1].expires_at.isoformat()})(
-        auth.login(session, payload.username, payload.password)
-    ))
+    return bad(
+        lambda: (
+            lambda result: {
+                "access_token": result[0],
+                "expires_at": result[1].expires_at.isoformat(),
+            }
+        )(auth.login(session, payload.username, payload.password))
+    )
 
 
 @router.post("/auth/password")
@@ -183,13 +260,19 @@ def set_password(
     session: Session = Depends(get_session),
 ):
     token = bearer(authorization)
-    return bad(lambda: (lambda account_id: {"account_id": str(auth.set_password(session, account_id, payload.password).id)})(
-        auth.authenticate(session, token)
-    ))
+    return bad(
+        lambda: (
+            lambda account_id: {
+                "account_id": str(auth.set_password(session, account_id, payload.password).id)
+            }
+        )(auth.authenticate(session, token))
+    )
 
 
 @router.post("/auth/logout")
-def logout(authorization: str | None = Header(default=None), session: Session = Depends(get_session)):
+def logout(
+    authorization: str | None = Header(default=None), session: Session = Depends(get_session)
+):
     token = bearer(authorization)
     auth.revoke(session, token)
     return {"status": "revoked"}

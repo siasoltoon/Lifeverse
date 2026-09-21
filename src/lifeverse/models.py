@@ -101,7 +101,9 @@ class Wallet(Base):
     character_id: Mapped[UUID] = mapped_column(
         ForeignKey("characters.id", ondelete="CASCADE"), unique=True
     )
-    currency_id: Mapped[UUID | None] = mapped_column(ForeignKey("currencies.id", ondelete="RESTRICT"))
+    currency_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("currencies.id", ondelete="RESTRICT")
+    )
     balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
 
 
@@ -386,7 +388,9 @@ class MarketOrder(Base):
     __tablename__ = "market_orders"
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     listing_id: Mapped[UUID] = mapped_column(ForeignKey("market_listings.id", ondelete="RESTRICT"))
-    buyer_character_id: Mapped[UUID] = mapped_column(ForeignKey("characters.id", ondelete="CASCADE"))
+    buyer_character_id: Mapped[UUID] = mapped_column(
+        ForeignKey("characters.id", ondelete="CASCADE")
+    )
     quantity: Mapped[int] = mapped_column(Integer)
     total_price: Mapped[Decimal] = mapped_column(Numeric(18, 2))
     idempotency_key: Mapped[str] = mapped_column(String(128), unique=True)
@@ -439,7 +443,9 @@ class Translation(Base):
 class ExploitSignal(Base):
     __tablename__ = "exploit_signals"
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    character_id: Mapped[UUID | None] = mapped_column(ForeignKey("characters.id", ondelete="SET NULL"))
+    character_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("characters.id", ondelete="SET NULL")
+    )
     rule: Mapped[str] = mapped_column(String(64))
     severity: Mapped[int] = mapped_column(Integer)
     evidence: Mapped[str] = mapped_column(Text, default="{}")

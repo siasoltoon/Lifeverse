@@ -166,7 +166,9 @@ def seed_phase_16_25(session):
         ("fa", "event.dispatched"): "رویداد اجرا شد",
     }
     for (locale, key), value in translations.items():
-        row = session.scalar(select(Translation).where(Translation.locale == locale, Translation.key == key))
+        row = session.scalar(
+            select(Translation).where(Translation.locale == locale, Translation.key == key)
+        )
         if not row:
             session.add(Translation(locale=locale, key=key, value=value))
     session.commit()

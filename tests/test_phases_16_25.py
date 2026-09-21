@@ -63,7 +63,9 @@ def test_event_engine_categories_and_idempotent_dispatch(session):
     service = EventService()
     definition = service.define(session, "city_test", "City Test", "city", repeatable=True)
     assert definition.category == "city"
-    row = service.schedule_player(session, c1.id, "milestone", datetime.now(UTC) - timedelta(seconds=1))
+    row = service.schedule_player(
+        session, c1.id, "milestone", datetime.now(UTC) - timedelta(seconds=1)
+    )
     processed = service.dispatch_due(session)
     assert row.id in {x.id for x in processed}
     assert session.get(GameEvent, row.id).state == "processed"
@@ -72,12 +74,16 @@ def test_event_engine_categories_and_idempotent_dispatch(session):
 def test_business_payroll_and_market_settlement(session):
     seller, buyer, city, currency = setup_two_characters(session)
     EconomyService().credit(session, seller.id, Decimal("100"), "seller-capital")
-    business = BusinessService().create(session, seller.id, city.id, "Shop", "retail", currency.id, Decimal("100"), EconomyService())
+    business = BusinessService().create(
+        session, seller.id, city.id, "Shop", "retail", currency.id, Decimal("100"), EconomyService()
+    )
     BusinessService().hire(session, business.id, buyer.id, Decimal("25"))
     BusinessService().payroll(session, business.id, "payroll-1")
     assert session.get(Business, business.id).balance == Decimal("75.00")
 
-    item = Item(code="apple", name="Apple", kind="food", weight=Decimal("0.2"), base_price=Decimal("5"))
+    item = Item(
+        code="apple", name="Apple", kind="food", weight=Decimal("0.2"), base_price=Decimal("5")
+    )
     session.add(item)
     session.commit()
     InventoryService().add(session, seller.id, item.id, 2)
