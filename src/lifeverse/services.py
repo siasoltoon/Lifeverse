@@ -192,9 +192,7 @@ class EconomyService:
             s.add(wallet_account)
             s.flush()
         system_account = s.scalar(
-            select(LedgerAccount).where(
-                LedgerAccount.code == f"system:{wallet.currency_id}"
-            )
+            select(LedgerAccount).where(LedgerAccount.code == f"system:{wallet.currency_id}")
         )
         if not system_account:
             system_account = LedgerAccount(
