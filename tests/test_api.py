@@ -3,4 +3,4 @@ from lifeverse.api import app
 
 
 def test_health():
-    assert TestClient(app).get("/health").json() == {"status": "ok"}
+    assert TestClient(app).get("/health").json() == {"status": "ready", "database": "ok"}
