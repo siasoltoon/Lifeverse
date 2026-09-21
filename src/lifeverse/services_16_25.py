@@ -460,7 +460,7 @@ class SecurityService:
             row.window_started_at = row.window_started_at.replace(tzinfo=UTC)
         if not row or now - row.window_started_at >= timedelta(seconds=window_seconds):
             row = RateLimitBucket(key=key, window_started_at=now, count=0, limit_value=limit_value)
-            s.merge(row)
+            row = s.merge(row)
             s.flush()
         if row.count >= limit_value:
             s.commit()
@@ -543,6 +543,8 @@ class AuthService:
     def authenticate(self, s, token):
         token_hash = hashlib.sha256(token.encode()).hexdigest()
         session = s.scalar(select(AuthSession).where(AuthSession.token_hash == token_hash))
+        if session and session.expires_at.tzinfo is None:
+            session.expires_at = session.expires_at.replace(tzinfo=UTC)
         if not session or session.revoked_at or session.expires_at <= datetime.now(UTC):
             raise ValueError("invalid or expired session")
         return session.account_id
