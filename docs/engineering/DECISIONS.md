@@ -17,5 +17,5 @@ D-0015 AI produces persisted proposals only; validation precedes any external ex
 D-0016 Telegram is a client adapter only; domain rules remain in application services.
 D-0017 Persian and English translations are persisted with English fallback.
 D-0018 Anti-exploit signals are auditable records; detection does not silently mutate player state.
-D-0019 Security uses salted scrypt password hashing, revocable sessions, rate limiting and audit records. citeturn0search0
+D-0019 Security uses salted scrypt password hashing, revocable sessions, rate limiting and audit records.
 D-0020 Performance work uses bounded pagination and database indexes; cache/scheduler infrastructure remains isolated for later operational phases.
