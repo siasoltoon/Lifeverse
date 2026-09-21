@@ -1,20 +1,41 @@
-from uuid import UUID
-
+from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from sqlalchemy import select
-from sqlalchemy.orm import Session
 
 from .domain import level_for_xp, validate_character_name, validate_location
-from .models import Account, AccountIdentity, Character, City, Country, Currency, Wallet
+
+from .models import (
+    Account,
+    AccountIdentity,
+    Character,
+    CharacterMission,
+    CharacterSkill,
+    City,
+    Country,
+    Currency,
+    Employment,
+    Inventory,
+    Item,
+    Job,
+    LedgerAccount,
+    LedgerEntry,
+    LedgerTransaction,
+    Mission,
+    NPC,
+    Property,
+    PropertyOwnership,
+    Skill,
+    SocialRelation,
+    Travel,
+    Wallet,
+    WorldClock,
+    WorldState,
+    AuditLog,
+)
 
 
 class PlayerService:
-    def register(
-        self,
-        session: Session,
-        username: str,
-        provider: str | None = None,
-        external_id: str | None = None,
-    ) -> Account:
+    def register(self, session, username, provider=None, external_id=None):
         username = username.strip()
         if not username or len(username) > 64:
             raise ValueError("username must contain 1-64 characters")
@@ -37,14 +58,7 @@ class PlayerService:
         session.refresh(account)
         return account
 
-    def create_character(
-        self,
-        session: Session,
-        account_id: UUID,
-        name: str,
-        country_id: UUID | None = None,
-        city_id: UUID | None = None,
-    ) -> Character:
+    def create_character(self, session, account_id, name, country_id=None, city_id=None):
         name = validate_character_name(name)
         validate_location(country_id, city_id)
         if country_id and not session.get(Country, country_id):
@@ -71,29 +85,414 @@ class PlayerService:
         session.refresh(character)
         return character
 
-    def add_xp(self, session: Session, character_id: UUID, amount: int) -> Character:
+    def add_xp(self, session, character_id, amount):
         if amount <= 0:
             raise ValueError("xp amount must be positive")
-        character = session.get(Character, character_id)
-        if not character:
+        c = session.get(Character, character_id)
+        if not c:
             raise ValueError("character not found")
-        character.xp += amount
-        character.level = level_for_xp(character.xp)
+        c.xp += amount
+        c.level = level_for_xp(c.xp)
         session.commit()
-        session.refresh(character)
-        return character
+        session.refresh(c)
+        return c
 
 
 class WorldService:
-    def list_countries(self, session: Session):
-        return list(session.scalars(select(Country).order_by(Country.name)))
+    def list_countries(self, s):
+        return list(s.scalars(select(Country).order_by(Country.name)))
 
-    def list_cities(
-        self, session: Session, country_id: UUID | None = None, query: str | None = None
-    ):
-        stmt = select(City).order_by(City.name)
+    def list_cities(self, s, country_id=None, query=None):
+        q = select(City).order_by(City.name)
         if country_id:
-            stmt = stmt.where(City.country_id == country_id)
+            q = q.where(City.country_id == country_id)
         if query:
-            stmt = stmt.where(City.name.ilike(f"%{query.strip()}%"))
-        return list(session.scalars(stmt))
+            q = q.where(City.name.ilike(f"%{query.strip()}%"))
+        return list(s.scalars(q))
+
+    def initialize(self, s, when=None):
+        clock = s.get(WorldClock, 1)
+        if not clock:
+            clock = WorldClock(
+                id=1,
+                world_time=when or datetime.now(UTC),
+                speed=Decimal("1"),
+                paused=False,
+                version=1,
+            )
+            s.add(clock)
+            s.commit()
+        return clock
+
+    def advance(self, s, seconds):
+        if seconds < 0:
+            raise ValueError("seconds must be non-negative")
+        clock = self.initialize(s)
+        if not clock.paused:
+            clock.world_time = clock.world_time + timedelta(
+                seconds=float(Decimal(seconds) * clock.speed)
+            )
+        clock.version += 1
+        s.commit()
+        s.refresh(clock)
+        return clock
+
+    def set_state(self, s, key, value):
+        if not key or len(key) > 64:
+            raise ValueError("invalid state key")
+        row = s.get(WorldState, key) or WorldState(key=key)
+        row.value = value
+        row.updated_at = datetime.now(UTC)
+        s.add(row)
+        s.commit()
+        return row
+
+
+class EconomyService:
+    def balance(self, s, character_id):
+        w = s.scalar(select(Wallet).where(Wallet.character_id == character_id))
+        if not w:
+            raise ValueError("wallet not found")
+        return w.balance
+
+    def credit(self, s, character_id, amount, idempotency_key, reference="credit"):
+        return self._move(s, character_id, amount, idempotency_key, reference)
+
+    def debit(self, s, character_id, amount, idempotency_key, reference="debit"):
+        return self._move(s, character_id, -amount, idempotency_key, reference)
+
+    def _apply_move(self, s, character_id, amount, key, reference):
+        amount = Decimal(str(amount))
+        if amount == 0:
+            raise ValueError("amount must be non-zero")
+        existing = s.scalar(
+            select(LedgerTransaction).where(LedgerTransaction.idempotency_key == key)
+        )
+        if existing:
+            return s.scalar(select(Wallet).where(Wallet.character_id == character_id))
+        wallet = s.scalar(select(Wallet).where(Wallet.character_id == character_id))
+        if not wallet:
+            raise ValueError("wallet not found")
+        if wallet.balance + amount < 0:
+            raise ValueError("insufficient funds")
+        wallet.balance += amount
+        tx = LedgerTransaction(idempotency_key=key, reference=reference)
+        s.add(tx)
+        s.flush()
+        wallet_account = s.scalar(
+            select(LedgerAccount).where(
+                LedgerAccount.code == f"wallet:{character_id}:{wallet.currency_id}"
+            )
+        )
+        if not wallet_account:
+            wallet_account = LedgerAccount(
+                code=f"wallet:{character_id}:{wallet.currency_id}",
+                currency_id=wallet.currency_id,
+            )
+            s.add(wallet_account)
+            s.flush()
+        system_account = s.scalar(
+            select(LedgerAccount).where(LedgerAccount.code == f"system:{wallet.currency_id}")
+        )
+        if not system_account:
+            system_account = LedgerAccount(
+                code=f"system:{wallet.currency_id}", currency_id=wallet.currency_id
+            )
+            s.add(system_account)
+            s.flush()
+        wallet_direction = "credit" if amount > 0 else "debit"
+        system_direction = "debit" if amount > 0 else "credit"
+        value = abs(amount)
+        s.add(
+            LedgerEntry(
+                transaction_id=tx.id,
+                ledger_account_id=wallet_account.id,
+                amount=value,
+                direction=wallet_direction,
+            )
+        )
+        s.add(
+            LedgerEntry(
+                transaction_id=tx.id,
+                ledger_account_id=system_account.id,
+                amount=value,
+                direction=system_direction,
+            )
+        )
+        s.add(
+            AuditLog(
+                actor_type="system",
+                actor_id=str(character_id),
+                action="economy.move",
+                entity_type="wallet",
+                entity_id=str(wallet.id),
+                details=f'{{"amount":"{amount}","reference":"{reference}","idempotency_key":"{key}"}}',
+            )
+        )
+        return wallet
+
+    def _move(self, s, character_id, amount, key, reference):
+        wallet = self._apply_move(s, character_id, amount, key, reference)
+        s.commit()
+        s.refresh(wallet)
+        return wallet
+
+
+class CareerService:
+    def hire(self, s, character_id, job_id):
+        c = s.get(Character, character_id)
+        j = s.get(Job, job_id)
+        if not c or not j:
+            raise ValueError("character or job not found")
+        if c.level < j.min_level:
+            raise ValueError("character level is below job requirement")
+        if s.scalar(
+            select(Employment).where(
+                Employment.character_id == character_id, Employment.status == "active"
+            )
+        ):
+            raise ValueError("character already employed")
+        e = Employment(character_id=character_id, job_id=job_id, started_at=datetime.now(UTC))
+        s.add(e)
+        s.commit()
+        return e
+
+    def fire(self, s, character_id):
+        e = s.scalar(
+            select(Employment).where(
+                Employment.character_id == character_id, Employment.status == "active"
+            )
+        )
+        if not e:
+            raise ValueError("active employment not found")
+        e.status = "ended"
+        s.commit()
+        return e
+
+
+class SkillService:
+    def add_xp(self, s, character_id, skill_id, amount):
+        if amount <= 0:
+            raise ValueError("skill xp must be positive")
+        skill = s.get(Skill, skill_id)
+        c = s.get(Character, character_id)
+        if not skill or not c:
+            raise ValueError("character or skill not found")
+        row = s.scalar(
+            select(CharacterSkill).where(
+                CharacterSkill.character_id == character_id, CharacterSkill.skill_id == skill_id
+            )
+        )
+        if not row:
+            row = CharacterSkill(character_id=character_id, skill_id=skill_id, level=0, xp=0)
+            s.add(row)
+        row.xp += amount
+        row.level = min(skill.max_level, row.xp // 100)
+        s.commit()
+        return row
+
+
+class InventoryService:
+    def add(self, s, character_id, item_id, quantity):
+        if quantity <= 0:
+            raise ValueError("quantity must be positive")
+        if not s.get(Character, character_id) or not s.get(Item, item_id):
+            raise ValueError("character or item not found")
+        row = s.scalar(
+            select(Inventory).where(
+                Inventory.character_id == character_id, Inventory.item_id == item_id
+            )
+        )
+        if not row:
+            row = Inventory(character_id=character_id, item_id=item_id, quantity=0)
+            s.add(row)
+        row.quantity += quantity
+        s.commit()
+        return row
+
+    def remove(self, s, character_id, item_id, quantity):
+        if quantity <= 0:
+            raise ValueError("quantity must be positive")
+        row = s.scalar(
+            select(Inventory).where(
+                Inventory.character_id == character_id, Inventory.item_id == item_id
+            )
+        )
+        if not row or row.quantity < quantity:
+            raise ValueError("insufficient inventory")
+        row.quantity -= quantity
+        s.commit()
+        return row
+
+
+class PropertyService:
+    def buy(self, s, character_id, property_id, economy):
+        p = s.get(Property, property_id)
+        if not p or not s.get(Character, character_id):
+            raise ValueError("property or character not found")
+        if s.scalar(select(PropertyOwnership).where(PropertyOwnership.property_id == property_id)):
+            raise ValueError("property already owned")
+        economy._apply_move(
+            s,
+            character_id,
+            -p.price,
+            f"property:{property_id}:{character_id}",
+            "property purchase",
+        )
+        o = PropertyOwnership(
+            property_id=property_id,
+            character_id=character_id,
+            acquired_at=datetime.now(UTC),
+        )
+        s.add(o)
+        s.add(
+            AuditLog(
+                actor_type="character",
+                actor_id=str(character_id),
+                action="property.purchase",
+                entity_type="property",
+                entity_id=str(property_id),
+                details=f'{{"price":"{p.price}"}}',
+            )
+        )
+        s.commit()
+        return o
+
+
+class TravelService:
+    def schedule(self, s, character_id, to_city_id, departure_at, minutes=60):
+        c = s.get(Character, character_id)
+        dest = s.get(City, to_city_id)
+        if not c or not c.city_id or not dest:
+            raise ValueError("travel requires current and destination city")
+        if c.city_id == to_city_id:
+            raise ValueError("destination must differ")
+        if minutes <= 0:
+            raise ValueError("travel duration must be positive")
+        t = Travel(
+            character_id=character_id,
+            from_city_id=c.city_id,
+            to_city_id=to_city_id,
+            status="scheduled",
+            departure_at=departure_at,
+            arrival_at=departure_at + timedelta(minutes=minutes),
+        )
+        s.add(t)
+        s.commit()
+        return t
+
+    def complete(self, s, travel_id):
+        t = s.get(Travel, travel_id)
+        if not t:
+            raise ValueError("travel not found")
+        c = s.get(Character, t.character_id)
+        c.city_id = t.to_city_id
+        t.status = "completed"
+        s.commit()
+        return t
+
+
+class SocialService:
+    def relate(self, s, source, target, kind, delta):
+        if source == target:
+            raise ValueError("self relation is invalid")
+        if not s.get(Character, source) or not s.get(Character, target):
+            raise ValueError("character not found")
+        r = s.scalar(
+            select(SocialRelation).where(
+                SocialRelation.source_character_id == source,
+                SocialRelation.target_character_id == target,
+                SocialRelation.kind == kind,
+            )
+        )
+        if not r:
+            r = SocialRelation(
+                source_character_id=source, target_character_id=target, kind=kind, score=0
+            )
+            s.add(r)
+        r.score = max(-100, min(100, r.score + delta))
+        s.commit()
+        return r
+
+
+class NPCService:
+    def create(self, s, name, city_id, role="citizen", disposition=0):
+        if city_id and not s.get(City, city_id):
+            raise ValueError("city not found")
+        n = NPC(
+            name=name.strip(),
+            city_id=city_id,
+            role=role,
+            disposition=max(-100, min(100, disposition)),
+        )
+        s.add(n)
+        s.commit()
+        return n
+
+    def move(self, s, npc_id, city_id):
+        n = s.get(NPC, npc_id)
+        if not n or not s.get(City, city_id):
+            raise ValueError("npc or city not found")
+        n.city_id = city_id
+        s.commit()
+        return n
+
+
+class MissionService:
+    def start(self, s, character_id, mission_id):
+        c = s.get(Character, character_id)
+        m = s.get(Mission, mission_id)
+        if not c or not m:
+            raise ValueError("character or mission not found")
+        if c.level < m.required_level:
+            raise ValueError("level requirement not met")
+        row = s.scalar(
+            select(CharacterMission).where(
+                CharacterMission.character_id == character_id,
+                CharacterMission.mission_id == mission_id,
+            )
+        )
+        if row and row.state != "completed":
+            raise ValueError("mission already active")
+        if row:
+            row.state = "active"
+            row.progress = 0
+            row.completed_at = None
+        else:
+            row = CharacterMission(character_id=character_id, mission_id=mission_id)
+            s.add(row)
+        s.commit()
+        return row
+
+    def progress(self, s, character_id, mission_id, amount, economy):
+        if amount <= 0:
+            raise ValueError("progress must be positive")
+        row = s.scalar(
+            select(CharacterMission).where(
+                CharacterMission.character_id == character_id,
+                CharacterMission.mission_id == mission_id,
+            )
+        )
+        m = s.get(Mission, mission_id)
+        c = s.get(Character, character_id)
+        if not row or not m or not c:
+            raise ValueError("mission state not found")
+        if row.state == "completed":
+            return row
+        row.progress += amount
+        if row.progress >= 100:
+            row.progress = 100
+            row.state = "completed"
+            row.completed_at = datetime.now(UTC)
+            c.xp += m.xp_reward
+            c.level = level_for_xp(c.xp)
+            if m.currency_reward:
+                economy._apply_move(
+                    s,
+                    character_id,
+                    m.currency_reward,
+                    f"mission:{mission_id}:{character_id}",
+                    "mission reward",
+                )
+        s.commit()
+        return row

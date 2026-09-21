@@ -1,5 +1,5 @@
 # TASK STATE
-Current task: P5-T04 — Phase 1–5 verification
+Current task: P15-T04 — Phase 6–15 verification
 Status: COMPLETED
-Implementation, CI, tests, migration smoke test, regression and merge were verified.
-Exact next action: begin Phase 6 — World Engine.
+Implementation, CI, regression tests and migration smoke test were verified on the final candidate.
+Exact next action: begin Phase 16 — Events.

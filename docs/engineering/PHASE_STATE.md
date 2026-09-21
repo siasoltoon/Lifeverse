@@ -1,5 +1,6 @@
 # PHASE STATE
-Phase 5 — Real World Country & City
+Phase 15 — Missions & Quests
 Status: COMPLETED
-Phases 1–5 are implemented, tested, verified and merged.
-Next phase: Phase 6 — World Engine.
+Phases 6–15 are implemented with persistent models, migrations, application services, API transport and regression coverage.
+Verified quality gates: Ruff format PASS; Ruff lint PASS; pytest PASS (12 passed); Alembic upgrade head PASS.
+Next phase: Phase 16 — Events.
