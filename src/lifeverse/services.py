@@ -73,7 +73,7 @@ class EconomyService:
         amount=Decimal(str(amount))
         if amount==0: raise ValueError("amount must be non-zero")
         existing=s.scalar(select(LedgerTransaction).where(LedgerTransaction.idempotency_key==key))
-        if existing: return s.get(Wallet, character_id, identity_token=None)
+        if existing: return s.scalar(select(Wallet).where(Wallet.character_id==character_id))
         w=s.scalar(select(Wallet).where(Wallet.character_id==character_id))
         if not w: raise ValueError("wallet not found")
         if w.balance+amount<0: raise ValueError("insufficient funds")
