@@ -64,10 +64,11 @@ def test_world_clock_persists(session):
     c, _ = setup_character(session)
     w = WorldService()
     first = w.initialize(session, datetime(2026, 1, 1, tzinfo=UTC))
+    before = first.world_time
     w.advance(session, 60)
     session.expire_all()
     second = session.get(type(first), 1)
-    assert second.version == 2 and second.world_time > first.world_time
+    assert second.version == 2 and second.world_time > before
 
 
 def test_economy_idempotency_and_no_negative_balance(session):
