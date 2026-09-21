@@ -10,6 +10,14 @@ depends_on = None
 
 
 def upgrade():
+    op.add_column("accounts", sa.Column("password_hash", sa.String(255), nullable=True))
+    op.create_table("auth_sessions",
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("account_id", sa.Uuid(), sa.ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("token_hash", sa.String(128), nullable=False, unique=True),
+        sa.Column("expires_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("revoked_at", sa.DateTime(timezone=True)),
+    )
     op.add_column("businesses", sa.Column("currency_id", sa.Uuid(), sa.ForeignKey("currencies.id", ondelete="RESTRICT"), nullable=True))
     op.create_table(
         "event_definitions",
@@ -103,6 +111,8 @@ def upgrade():
 
 
 def downgrade():
+    op.drop_table("auth_sessions")
+    op.drop_column("accounts", "password_hash")
     op.drop_column("businesses", "currency_id")
     op.drop_index("ix_exploit_signals_character_state", table_name="exploit_signals")
     op.drop_index("ix_ai_intents_state", table_name="ai_intents")
