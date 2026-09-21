@@ -336,6 +336,7 @@ class Business(Base):
     name: Mapped[str] = mapped_column(String(120))
     kind: Mapped[str] = mapped_column(String(64))
     balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    currency_id: Mapped[UUID] = mapped_column(ForeignKey("currencies.id", ondelete="RESTRICT"))
 
 
 class GameEvent(Base):
