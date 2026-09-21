@@ -1,11 +1,13 @@
 import os
+from uuid import UUID
 
-os.environ["LIFEVERSE_DATABASE_URL"] = "sqlite://"
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
 from lifeverse.db import Base
 
+os.environ["LIFEVERSE_DATABASE_URL"] = "sqlite://"
 
 @pytest.fixture()
 def session():

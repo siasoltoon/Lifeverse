@@ -1,5 +1,5 @@
-import logging, sys
-
+import logging
+import sys
 
 def configure_logging(level: str = "INFO") -> None:
     logging.basicConfig(
