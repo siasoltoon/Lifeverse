@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,7 @@ from .services_16_25 import (
     LocalizationService,
     MarketService,
     SecurityService,
+    AuthService,
 )
 
 security = SecurityService()\n\n\ndef rate_limit(request: Request, session: Session = Depends(get_session)):\n    key = "api:" + (request.client.host if request.client else "unknown")\n    if not security.allow(session, key, 120, 60):\n        raise HTTPException(429, "rate limit exceeded")\n\n\nrouter = APIRouter(prefix="/v1", dependencies=[Depends(rate_limit)])
@@ -141,3 +142,44 @@ def ui_config(locale: str = Query("fa"), session: Session = Depends(get_session)
         "api_version": "v1",
         "features": {"events": True, "business": True, "market": True, "law": True, "ai_intents": True},
     }
+
+
+class LoginRequest(BaseModel):
+    username: str = Field(min_length=1, max_length=64)
+    password: str = Field(min_length=12, max_length=256)
+
+
+class PasswordRequest(BaseModel):
+    password: str = Field(min_length=12, max_length=256)
+
+
+def bearer(authorization: str | None):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(401, "bearer token required")
+    return authorization[7:].strip()
+
+
+@router.post("/auth/login")
+def login(payload: LoginRequest, session: Session = Depends(get_session)):
+    return bad(lambda: (lambda result: {"access_token": result[0], "expires_at": result[1].expires_at.isoformat()})(
+        auth.login(session, payload.username, payload.password)
+    ))
+
+
+@router.post("/auth/password")
+def set_password(
+    payload: PasswordRequest,
+    authorization: str | None = Header(default=None),
+    session: Session = Depends(get_session),
+):
+    token = bearer(authorization)
+    return bad(lambda: (lambda account_id: {"account_id": str(auth.set_password(session, account_id, payload.password).id)})(
+        auth.authenticate(session, token)
+    ))
+
+
+@router.post("/auth/logout")
+def logout(authorization: str | None = Header(default=None), session: Session = Depends(get_session)):
+    token = bearer(authorization)
+    auth.revoke(session, token)
+    return {"status": "revoked"}
