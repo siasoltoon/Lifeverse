@@ -1,7 +1,7 @@
 from decimal import Decimal
 from sqlalchemy import select
 from .db import SessionLocal
-from .models import Country, City, Currency, Job, Skill, Item, Vehicle, Mission, Property
+from .models import Country, City, Currency, Job, Skill, Item, Vehicle, Mission
 
 COUNTRIES = [
     {
