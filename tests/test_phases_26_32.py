@@ -67,6 +67,7 @@ def test_health_endpoint_is_database_backed():
     engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
     Base.metadata.create_all(engine)
     Session = sessionmaker(bind=engine)
+
     def override():
         with Session() as db:
             yield db
@@ -76,6 +77,7 @@ def test_health_endpoint_is_database_backed():
     app.dependency_overrides.clear()
     Base.metadata.drop_all(engine)
     engine.dispose()
+
     assert response.status_code == 200
     assert response.json()["database"] == "ok"
 
