@@ -15,10 +15,10 @@ class Account(Base):
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
-    identities: Mapped[list["AccountIdentity"]] = relationship(
+    identities: Mapped[list[AccountIdentity]] = relationship(
         back_populates="account", cascade="all, delete-orphan"
     )
-    characters: Mapped[list["Character"]] = relationship(
+    characters: Mapped[list[Character]] = relationship(
         back_populates="account", cascade="all, delete-orphan"
     )
 
@@ -57,7 +57,7 @@ class Country(Base):
     languages: Mapped[str] = mapped_column(Text)
     population: Mapped[int] = mapped_column(Integer)
     cost_of_living_index: Mapped[Decimal] = mapped_column(Numeric(8, 2))
-    cities: Mapped[list["City"]] = relationship(
+    cities: Mapped[list[City]] = relationship(
         back_populates="country", cascade="all, delete-orphan"
     )
 
