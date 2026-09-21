@@ -9,7 +9,7 @@ from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from random import Random
 
-from sqlalchemy import select, update
+from sqlalchemy import select
 
 from .models import (
     AIIntent,
