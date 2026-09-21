@@ -2,7 +2,7 @@ from datetime import datetime
 from decimal import Decimal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
@@ -15,9 +15,10 @@ from .services_16_25 import (
     LawService,
     LocalizationService,
     MarketService,
+    SecurityService,
 )
 
-router = APIRouter(prefix="/v1")
+security = SecurityService()\n\n\ndef rate_limit(request: Request, session: Session = Depends(get_session)):\n    key = "api:" + (request.client.host if request.client else "unknown")\n    if not security.allow(session, key, 120, 60):\n        raise HTTPException(429, "rate limit exceeded")\n\n\nrouter = APIRouter(prefix="/v1", dependencies=[Depends(rate_limit)])
 events = EventService()
 businesses = BusinessService()
 market = MarketService()
