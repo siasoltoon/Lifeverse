@@ -136,6 +136,7 @@ def seed():
                         required_level=level,
                     )
                 )
+        seed_phase_16_25(s)
         s.commit()
 
 
