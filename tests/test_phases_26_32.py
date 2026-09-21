@@ -89,7 +89,7 @@ def test_health_endpoint_is_database_backed():
 
 def test_job_failure_retries_until_dead(session):
     service = JobService()
-    row = service.enqueue(
+    service.enqueue(
         session,
         "test.retry",
         run_at=datetime.now(UTC),
