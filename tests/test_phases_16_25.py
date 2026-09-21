@@ -127,9 +127,10 @@ def test_auth_uses_scrypt_and_revocable_sessions(session):
     auth.revoke(session, token)
     try:
         auth.authenticate(session, token)
-        assert False
     except ValueError:
-        assert True
+        pass
+    else:
+        raise AssertionError("revoked token was accepted")
 
 
 def test_random_events_are_deterministic_and_telegram_is_client_only():
