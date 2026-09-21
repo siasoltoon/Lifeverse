@@ -71,7 +71,8 @@ def test_event_engine_categories_and_idempotent_dispatch(session):
 
 def test_business_payroll_and_market_settlement(session):
     seller, buyer, city, currency = setup_two_characters(session)
-    EconomyService().credit(session, seller.id, Decimal("100"), "seller-capital")\n    business = BusinessService().create(session, seller.id, city.id, "Shop", "retail", currency.id, Decimal("100"), EconomyService())
+    EconomyService().credit(session, seller.id, Decimal("100"), "seller-capital")
+    business = BusinessService().create(session, seller.id, city.id, "Shop", "retail", currency.id, Decimal("100"), EconomyService())
     BusinessService().hire(session, business.id, buyer.id, Decimal("25"))
     BusinessService().payroll(session, business.id, "payroll-1")
     assert session.get(Business, business.id).balance == Decimal("75.00")
