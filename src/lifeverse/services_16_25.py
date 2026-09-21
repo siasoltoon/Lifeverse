@@ -105,7 +105,7 @@ class EventService:
 
 
 class BusinessService:
-    def create(self, s, owner_character_id, city_id, name, kind, capital=Decimal("0")):
+    def create(self, s, owner_character_id, city_id, name, kind, currency_id, capital=Decimal("0")):
         if not s.get(Character, owner_character_id):
             raise ValueError("owner not found")
         row = Business(
@@ -114,6 +114,7 @@ class BusinessService:
             name=name.strip(),
             kind=kind.strip(),
             balance=Decimal(str(capital)),
+            currency_id=currency_id,
         )
         if row.balance < 0:
             raise ValueError("capital cannot be negative")
@@ -145,6 +146,10 @@ class BusinessService:
             raise ValueError("insufficient business funds")
         business.balance -= total
         for employee in employees:
+            wallet = s.scalar(select(Wallet).where(Wallet.character_id == employee.character_id))
+            if not wallet or wallet.currency_id != business.currency_id:
+                raise ValueError("employee wallet currency mismatch")
+            wallet.balance += employee.wage
             key = f"{idempotency_prefix}:{employee.id}"
             if s.scalar(select(AuditLog).where(AuditLog.action == "business.payroll", AuditLog.details.like(f'%{key}%'))):
                 continue
