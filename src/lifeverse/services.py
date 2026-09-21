@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from sqlalchemy import select
 
@@ -10,19 +10,16 @@ from .models import (
     Character,
     CharacterMission,
     CharacterSkill,
-    CharacterVehicle,
     City,
     Country,
     Currency,
     Employment,
-    GameEvent,
     Inventory,
     Item,
     Job,
     LedgerAccount,
     LedgerEntry,
     LedgerTransaction,
-    MarketListing,
     Mission,
     NPC,
     Property,
@@ -30,7 +27,6 @@ from .models import (
     Skill,
     SocialRelation,
     Travel,
-    Vehicle,
     Wallet,
     WorldClock,
     WorldState,
@@ -118,7 +114,7 @@ class WorldService:
         if not clock:
             clock = WorldClock(
                 id=1,
-                world_time=when or datetime.now(timezone.utc),
+                world_time=when or datetime.now(UTC),
                 speed=Decimal("1"),
                 paused=False,
                 version=1,
@@ -145,7 +141,7 @@ class WorldService:
             raise ValueError("invalid state key")
         row = s.get(WorldState, key) or WorldState(key=key)
         row.value = value
-        row.updated_at = datetime.now(timezone.utc)
+        row.updated_at = datetime.now(UTC)
         s.add(row)
         s.commit()
         return row
@@ -215,7 +211,7 @@ class CareerService:
         ):
             raise ValueError("character already employed")
         e = Employment(
-            character_id=character_id, job_id=job_id, started_at=datetime.now(timezone.utc)
+            character_id=character_id, job_id=job_id, started_at=datetime.now(UTC)
         )
         s.add(e)
         s.commit()
@@ -300,7 +296,7 @@ class PropertyService:
         o = PropertyOwnership(
             property_id=property_id,
             character_id=character_id,
-            acquired_at=datetime.now(timezone.utc),
+            acquired_at=datetime.now(UTC),
         )
         s.add(o)
         s.commit()
@@ -431,7 +427,7 @@ class MissionService:
         if row.progress >= 100:
             row.progress = 100
             row.state = "completed"
-            row.completed_at = datetime.now(timezone.utc)
+            row.completed_at = datetime.now(UTC)
             c.xp += m.xp_reward
             c.level = level_for_xp(c.xp)
             if m.currency_reward:
