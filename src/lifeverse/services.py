@@ -210,9 +210,7 @@ class CareerService:
             )
         ):
             raise ValueError("character already employed")
-        e = Employment(
-            character_id=character_id, job_id=job_id, started_at=datetime.now(UTC)
-        )
+        e = Employment(character_id=character_id, job_id=job_id, started_at=datetime.now(UTC))
         s.add(e)
         s.commit()
         return e
