@@ -1,5 +1,13 @@
 # ARCHITECTURE MAP
-Implemented foundation: src/lifeverse with configuration, persistence, domain rules, application services and API transport.
-Target boundaries: core/domain → application → infrastructure → api/clients/workers.
-Current initial implementation keeps domain rules framework-light; later phases will extract explicit ports/repositories as needed.
-Forbidden: Core/application dependency on Telegram, Railway or concrete external AI providers; clients must not write authoritative state directly.
+Implemented foundation:
+- src/lifeverse/config.py — environment-driven configuration
+- src/lifeverse/db.py — SQLAlchemy engine/session boundary
+- src/lifeverse/domain.py — domain rules
+- src/lifeverse/services.py — application service layer
+- src/lifeverse/api.py — thin FastAPI transport
+- migrations/ — versioned persistence schema
+- tests/ — automated tests
+- .github/workflows/ci.yml — CI quality gate
+Dependency direction: Core/Domain → Application → Infrastructure/API/Clients.
+Clients and transport do not directly mutate authoritative state.
+No Railway-specific dependency exists in core/application design.

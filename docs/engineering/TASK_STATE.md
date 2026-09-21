@@ -1,5 +1,5 @@
 # TASK STATE
-Current task: P5-T04 — CI verification and regression
-Status: VERIFICATION
-Scope: verify phases 1–5 with CI, tests, lint, formatting and migration smoke test.
-Next action: inspect CI; diagnose/fix any failure; rerun until green; then finalize state.
+Current task: P5-T04 — Phase 1–5 verification
+Status: COMPLETED
+Implementation, CI, tests, migration smoke test, regression and merge were verified.
+Exact next action: begin Phase 6 — World Engine.
