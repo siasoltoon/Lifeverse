@@ -29,3 +29,5 @@ jobs:
           git add .
           git commit -m "style: format phases 16-25 implementation"
           git push origin HEAD:feature/phases-16-25
+
+# formatter trigger
