@@ -110,3 +110,20 @@ def test_security_and_antiexploit_controls(session):
     assert not security.allow(session, "ip:test", 2)
     signal = AntiExploitService().signal(session, c1.id, "manual_test", 5, {"n": 3})
     assert signal.state == "open"
+
+
+def test_auth_uses_scrypt_and_revocable_sessions(session):
+    from lifeverse.services_16_25 import AuthService
+
+    player = PlayerService()
+    account = player.register(session, "secure-user")
+    auth = AuthService()
+    auth.set_password(session, account.id, "correct horse battery staple")
+    token, auth_session = auth.login(session, "secure-user", "correct horse battery staple")
+    assert auth.authenticate(session, token) == account.id
+    auth.revoke(session, token)
+    try:
+        auth.authenticate(session, token)
+        assert False
+    except ValueError:
+        assert True
