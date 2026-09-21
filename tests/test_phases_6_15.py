@@ -130,7 +130,5 @@ def test_economy_balances_ledger_and_property_is_atomic(session):
     session.commit()
     PropertyService().buy(session, c.id, property_row.id, economy)
     assert economy.balance(session, c.id) == Decimal("50.00")
-    entries = session.query(LedgerEntry).join(
-        LedgerEntry.transaction_id == LedgerEntry.transaction_id
-    ).all()
+    entries = session.query(LedgerEntry).all()
     assert len(entries) == 4
