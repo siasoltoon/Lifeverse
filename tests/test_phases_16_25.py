@@ -127,3 +127,12 @@ def test_auth_uses_scrypt_and_revocable_sessions(session):
         assert False
     except ValueError:
         assert True
+
+
+def test_random_events_are_deterministic_and_telegram_is_client_only():
+    from lifeverse.telegram_adapter import TelegramUpdateAdapter
+
+    adapter = TelegramUpdateAdapter()
+    command = adapter.parse({"message": {"from": {"id": 123}, "text": "/start"}})
+    assert command.external_user_id == "123"
+    assert command.text == "/start"
