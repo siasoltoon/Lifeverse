@@ -29,7 +29,7 @@ def upgrade():
             sa.Column(
                 "currency_id",
                 sa.Uuid(),
-                sa.ForeignKey("currencies.id", ondelete="RESTRICT"),
+                sa.ForeignKey("currencies.id", ondelete="RESTRICT", name="fk_business_currency"),
                 nullable=True,
             )
         )
