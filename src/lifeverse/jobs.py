@@ -103,7 +103,7 @@ class JobService:
             .where(JobRecord.id == candidate, JobRecord.status == "queued")
             .values(
                 status="running",
-                locked_by=self.worker_id,
+                locked_by=worker_id,
                 locked_at=now,
                 attempts=JobRecord.attempts + 1,
                 updated_at=now,
