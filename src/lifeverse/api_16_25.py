@@ -46,7 +46,7 @@ class BusinessRequest(BaseModel):
     city_id: UUID
     name: str = Field(min_length=1, max_length=120)
     kind: str = Field(min_length=1, max_length=64)
-    capital: Decimal = Field(default=Decimal("0"), ge=0)
+    currency_id: UUID\n    capital: Decimal = Field(default=Decimal("0"), ge=0)
 
 
 class ListingRequest(BaseModel):
@@ -87,7 +87,7 @@ def dispatch_events(session: Session = Depends(get_session)):
 @router.post("/businesses", status_code=201)
 def create_business(payload: BusinessRequest, session: Session = Depends(get_session)):
     return bad(lambda: {"id": str(businesses.create(
-        session, payload.owner_character_id, payload.city_id, payload.name, payload.kind, payload.capital
+        session, payload.owner_character_id, payload.city_id, payload.name, payload.kind, payload.currency_id, payload.capital, economy
     ).id)})
 
 
