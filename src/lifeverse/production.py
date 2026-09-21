@@ -13,8 +13,12 @@ class DeploymentProfile:
 
 PROFILES = {
     "local": DeploymentProfile("local", "api+worker", "configured SQLAlchemy URL", "worker loop"),
-    "vps": DeploymentProfile("vps", "api+worker", "configured SQLAlchemy URL", "system service/cron"),
-    "railway": DeploymentProfile("railway", "api+worker", "managed database", "separate worker service"),
+    "vps": DeploymentProfile(
+        "vps", "api+worker", "configured SQLAlchemy URL", "system service/cron"
+    ),
+    "railway": DeploymentProfile(
+        "railway", "api+worker", "managed database", "separate worker service"
+    ),
     "ci": DeploymentProfile("ci", "test process", "ephemeral test database", "test scheduler"),
 }
 
