@@ -18,4 +18,7 @@ D-0016 Telegram is a client adapter only; domain rules remain in application ser
 D-0017 Persian and English translations are persisted with English fallback.
 D-0018 Anti-exploit signals are auditable records; detection does not silently mutate player state.
 D-0019 Security uses salted scrypt password hashing, revocable sessions, rate limiting and audit records.
-D-0020 Performance work uses bounded pagination and database indexes; cache/scheduler infrastructure remains isolated for later operational phases.
+D-0020 Performance work uses bounded pagination and database indexes.
+D-0021 Background jobs are persistent database records with unique idempotency keys, atomic conditional claims, worker leases, retries with backoff and dead-letter state.
+D-0022 Readiness is database-backed; operational logs/metrics are separate from authoritative simulation state.
+D-0023 Deployment topology is portable: API, worker and migration processes can be independently deployed against the same configured database.
