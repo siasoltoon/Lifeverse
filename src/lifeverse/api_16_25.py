@@ -20,6 +20,7 @@ from .services_16_25 import (
 )
 
 security = SecurityService()
+auth = AuthService()
 
 
 def rate_limit(request: Request, session: Session = Depends(get_session)):
