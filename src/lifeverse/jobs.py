@@ -74,9 +74,7 @@ class JobService:
         cutoff = now - timedelta(seconds=lease_seconds)
         rows = list(
             session.scalars(
-                select(JobRecord).where(
-                    JobRecord.status == "running", JobRecord.locked_at < cutoff
-                )
+                select(JobRecord).where(JobRecord.status == "running", JobRecord.locked_at < cutoff)
             )
         )
         for row in rows:
