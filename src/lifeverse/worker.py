@@ -2,9 +2,24 @@ from __future__ import annotations
 
 import argparse
 import time
+from uuid import UUID
 
 from .db import SessionLocal
 from .jobs import Worker
+from .services import TravelService
+from .services_16_25 import BusinessService, EventService
+
+
+def event_dispatch(session, payload):
+    return [str(x.id) for x in EventService().dispatch_due(session)]
+
+
+def business_payroll(session, payload):
+    return str(BusinessService().payroll(session, UUID(payload["business_id"]), payload["idempotency_key"]).id)
+
+
+def travel_complete(session, payload):
+    return str(TravelService().complete(session, UUID(payload["travel_id"])).id)
 
 
 def main():
@@ -13,7 +28,11 @@ def main():
     parser.add_argument("--interval", type=float, default=1.0)
     args = parser.parse_args()
     worker = Worker()
-    handlers = {}
+    handlers = {
+        "event.dispatch": event_dispatch,
+        "business.payroll": business_payroll,
+        "travel.complete": travel_complete,
+    }
     while True:
         with SessionLocal() as session:
             worker.run_once(session, handlers)
