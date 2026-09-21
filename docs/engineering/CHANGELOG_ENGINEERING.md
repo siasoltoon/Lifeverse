@@ -10,4 +10,5 @@
 - Phase 31: database-backed health E2E and application integration verification.
 - Phase 32: final candidate audit across persistence, state boundaries, job reliability, security, deployment and regression gates.
 - Root causes fixed during verification: Ruff formatting, unused lint assignment, worker lease ownership bug, and stale health contract assertion.
-- Verified candidate CI 35589003958: Ruff format PASS, Ruff lint PASS, pytest PASS (24 passed), Alembic upgrade head PASS.
+- Verified candidate CI 35589115359: Ruff format PASS, Ruff lint PASS, pytest PASS (24 passed), Alembic upgrade head PASS, Docker container build PASS.
+- PR #6 merged as d8f308e062a175f3a9d56da70fbb1e1fd843a2f9.
