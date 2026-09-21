@@ -1,5 +1,3 @@
-
-
 class Account(Base):
     __tablename__ = "accounts"
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
