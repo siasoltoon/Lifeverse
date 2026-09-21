@@ -102,6 +102,15 @@ class EventService:
         s.commit()
         return rows
 
+    def random_event(self, s, seed, when, scope="world"):
+        if seed < 0:
+            raise ValueError("seed must be non-negative")
+        rng = Random(seed)
+        choices = ["market_shift", "city_festival", "social_wave", "weather_random", "world_news"]
+        event_type = rng.choice(choices)
+        return self.schedule(s, f"{scope}:{event_type}", when, {"seed": seed, "scope": scope})
+
+
     def seasonal(self, s, year, season, payload=None):
         if season not in {"spring", "summer", "autumn", "winter"}:
             raise ValueError("invalid season")
