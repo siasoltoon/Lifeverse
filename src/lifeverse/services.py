@@ -30,6 +30,7 @@ from .models import (
     Wallet,
     WorldClock,
     WorldState,
+    AuditLog,
 )
 
 
@@ -160,7 +161,7 @@ class EconomyService:
     def debit(self, s, character_id, amount, idempotency_key, reference="debit"):
         return self._move(s, character_id, -amount, idempotency_key, reference)
 
-    def _move(self, s, character_id, amount, key, reference):
+    def _apply_move(self, s, character_id, amount, key, reference):
         amount = Decimal(str(amount))
         if amount == 0:
             raise ValueError("amount must be non-zero")
@@ -169,31 +170,74 @@ class EconomyService:
         )
         if existing:
             return s.scalar(select(Wallet).where(Wallet.character_id == character_id))
-        w = s.scalar(select(Wallet).where(Wallet.character_id == character_id))
-        if not w:
+        wallet = s.scalar(select(Wallet).where(Wallet.character_id == character_id))
+        if not wallet:
             raise ValueError("wallet not found")
-        if w.balance + amount < 0:
+        if wallet.balance + amount < 0:
             raise ValueError("insufficient funds")
-        w.balance += amount
+        wallet.balance += amount
         tx = LedgerTransaction(idempotency_key=key, reference=reference)
         s.add(tx)
         s.flush()
-        la = s.scalar(select(LedgerAccount).where(LedgerAccount.currency_id == w.currency_id))
-        if not la:
-            la = LedgerAccount(code=f"wallet:{w.currency_id}", currency_id=w.currency_id)
-            s.add(la)
+        wallet_account = s.scalar(
+            select(LedgerAccount).where(
+                LedgerAccount.code == f"wallet:{character_id}:{wallet.currency_id}"
+            )
+        )
+        if not wallet_account:
+            wallet_account = LedgerAccount(
+                code=f"wallet:{character_id}:{wallet.currency_id}",
+                currency_id=wallet.currency_id,
+            )
+            s.add(wallet_account)
             s.flush()
+        system_account = s.scalar(
+            select(LedgerAccount).where(
+                LedgerAccount.code == f"system:{wallet.currency_id}"
+            )
+        )
+        if not system_account:
+            system_account = LedgerAccount(
+                code=f"system:{wallet.currency_id}", currency_id=wallet.currency_id
+            )
+            s.add(system_account)
+            s.flush()
+        wallet_direction = "credit" if amount > 0 else "debit"
+        system_direction = "debit" if amount > 0 else "credit"
+        value = abs(amount)
         s.add(
             LedgerEntry(
                 transaction_id=tx.id,
-                ledger_account_id=la.id,
-                amount=abs(amount),
-                direction="credit" if amount > 0 else "debit",
+                ledger_account_id=wallet_account.id,
+                amount=value,
+                direction=wallet_direction,
             )
         )
+        s.add(
+            LedgerEntry(
+                transaction_id=tx.id,
+                ledger_account_id=system_account.id,
+                amount=value,
+                direction=system_direction,
+            )
+        )
+        s.add(
+            AuditLog(
+                actor_type="system",
+                actor_id=str(character_id),
+                action="economy.move",
+                entity_type="wallet",
+                entity_id=str(wallet.id),
+                details=f'{{"amount":"{amount}","reference":"{reference}","idempotency_key":"{key}"}}',
+            )
+        )
+        return wallet
+
+    def _move(self, s, character_id, amount, key, reference):
+        wallet = self._apply_move(s, character_id, amount, key, reference)
         s.commit()
-        s.refresh(w)
-        return w
+        s.refresh(wallet)
+        return wallet
 
 
 class CareerService:
@@ -290,13 +334,29 @@ class PropertyService:
             raise ValueError("property or character not found")
         if s.scalar(select(PropertyOwnership).where(PropertyOwnership.property_id == property_id)):
             raise ValueError("property already owned")
-        economy.debit(s, character_id, p.price, f"property:{property_id}", "property purchase")
+        economy._apply_move(
+            s,
+            character_id,
+            -p.price,
+            f"property:{property_id}:{character_id}",
+            "property purchase",
+        )
         o = PropertyOwnership(
             property_id=property_id,
             character_id=character_id,
             acquired_at=datetime.now(UTC),
         )
         s.add(o)
+        s.add(
+            AuditLog(
+                actor_type="character",
+                actor_id=str(character_id),
+                action="property.purchase",
+                entity_type="property",
+                entity_id=str(property_id),
+                details=f'{{"price":"{p.price}"}}',
+            )
+        )
         s.commit()
         return o
 
@@ -429,7 +489,7 @@ class MissionService:
             c.xp += m.xp_reward
             c.level = level_for_xp(c.xp)
             if m.currency_reward:
-                economy.credit(
+                economy._apply_move(
                     s,
                     character_id,
                     m.currency_reward,
