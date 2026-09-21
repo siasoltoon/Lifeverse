@@ -101,7 +101,7 @@ class Wallet(Base):
     character_id: Mapped[UUID] = mapped_column(
         ForeignKey("characters.id", ondelete="CASCADE"), unique=True
     )
-    currency_id: Mapped[UUID] = mapped_column(ForeignKey("currencies.id", ondelete="RESTRICT"))
+    currency_id: Mapped[UUID | None] = mapped_column(ForeignKey("currencies.id", ondelete="RESTRICT"))
     balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
 
 
