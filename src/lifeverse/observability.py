@@ -31,7 +31,9 @@ def timed(operation):
     try:
         yield
     finally:
-        logger.info("operation=%s duration_ms=%.2f", operation, (time.perf_counter() - started) * 1000)
+        logger.info(
+            "operation=%s duration_ms=%.2f", operation, (time.perf_counter() - started) * 1000
+        )
 
 
 def readiness(session):
