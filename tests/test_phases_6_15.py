@@ -1,13 +1,14 @@
 from datetime import UTC, datetime
 from decimal import Decimal
 
-from lifeverse.models import Character, City, Currency, Item, Job, Mission, Skill
+from lifeverse.models import Character, City, Currency, Item, Job, LedgerEntry, Mission, Property, Skill
 from lifeverse.services import (
     CareerService,
     EconomyService,
     InventoryService,
     MissionService,
     PlayerService,
+    PropertyService,
     SkillService,
     SocialService,
     TravelService,
@@ -112,3 +113,24 @@ def test_travel_requires_distinct_destination(session):
     t = TravelService().schedule(session, c.id, other.id, datetime.now(UTC), 10)
     TravelService().complete(session, t.id)
     assert session.get(Character, c.id).city_id == other.id
+
+
+def test_economy_balances_ledger_and_property_is_atomic(session):
+    c, city = setup_character(session)
+    economy = EconomyService()
+    economy.credit(session, c.id, 200, "credit-property-1")
+    property_row = Property(
+        city_id=city.id,
+        kind="home",
+        name="Starter Home",
+        capacity=2,
+        price=Decimal("150"),
+    )
+    session.add(property_row)
+    session.commit()
+    PropertyService().buy(session, c.id, property_row.id, economy)
+    assert economy.balance(session, c.id) == Decimal("50.00")
+    entries = session.query(LedgerEntry).join(
+        LedgerEntry.transaction_id == LedgerEntry.transaction_id
+    ).all()
+    assert len(entries) == 4
