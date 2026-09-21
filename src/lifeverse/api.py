@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from .config import get_settings
 from .db import get_session
 from .logging import configure_logging
+from .observability import readiness
 from .api_16_25 import router as simulation_router
 from .services import (
     PlayerService,
@@ -25,7 +26,7 @@ from .services import (
 
 s = get_settings()
 configure_logging(s.log_level)
-app = FastAPI(title=s.app_name, version="0.3.0")
+app = FastAPI(title=s.app_name, version="0.4.0")
 app.include_router(simulation_router)
 players = PlayerService()
 world = WorldService()
@@ -117,8 +118,8 @@ def bad(fn):
 
 
 @app.get("/health")
-def health():
-    return {"status": "ok"}
+def health(session: Session = Depends(get_session)):
+    return readiness(session)
 
 
 @app.post("/accounts", status_code=201)
