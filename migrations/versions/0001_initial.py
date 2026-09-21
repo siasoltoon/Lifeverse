@@ -1,21 +1,115 @@
 """initial schema"""
 from alembic import op
 import sqlalchemy as sa
-revision="0001_initial";down_revision=None;branch_labels=None;depends_on=None
+
+revision = "0001_initial"
+down_revision = None
+branch_labels = None
+depends_on = None
+
 def upgrade():
- op.create_table("accounts",sa.Column("id",sa.Uuid(),primary_key=True),sa.Column("username",sa.String(64),nullable=False),sa.Column("created_at",sa.DateTime(timezone=True),nullable=False));op.create_index("ix_accounts_username","accounts",["username"],unique=True)
- op.create_table("account_identities",sa.Column("id",sa.Uuid(),primary_key=True),sa.Column("account_id",sa.Uuid(),sa.ForeignKey("accounts.id",ondelete="CASCADE"),nullable=False),sa.Column("provider",sa.String(32),nullable=False),sa.Column("external_id",sa.String(128),nullable=False),sa.UniqueConstraint("provider","external_id",name="uq_identity_provider_external"))
- op.create_table("currencies",sa.Column("id",sa.Uuid(),primary_key=True),sa.Column("code",sa.String(3),nullable=False),sa.Column("name",sa.String(80),nullable=False),sa.Column("symbol",sa.String(8),nullable=False));op.create_index("ix_currencies_code","currencies",["code"],unique=True)
- op.create_table("countries",sa.Column("id",sa.Uuid(),primary_key=True),sa.Column("iso2",sa.String(2),nullable=False),sa.Column("iso3",sa.String(3),nullable=False),sa.Column("name",sa.String(120),nullable=False),sa.Column("capital",sa.String(120),nullable=False),sa.Column("region",sa.String(80),nullable=False),sa.Column("currency_code",sa.String(3),nullable=False),sa.Column("languages",sa.Text(),nullable=False),sa.Column("population",sa.Integer(),nullable=False),sa.Column("cost_of_living_index",sa.Numeric(8,2),nullable=False));op.create_index("ix_countries_iso2","countries",["iso2"],unique=True);op.create_index("ix_countries_iso3","countries",["iso3"],unique=True)
- op.create_table("cities",sa.Column("id",sa.Uuid(),primary_key=True),sa.Column("country_id",sa.Uuid(),sa.ForeignKey("countries.id",ondelete="RESTRICT"),nullable=False),sa.Column("name",sa.String(120),nullable=False),sa.Column("region",sa.String(120),nullable=False),sa.Column("population",sa.Integer(),nullable=False),sa.Column("cost_of_living_index",sa.Numeric(8,2),nullable=False),sa.UniqueConstraint("country_id","name",name="uq_city_country_name"));op.create_index("ix_cities_country_id","cities",["country_id"]);op.create_index("ix_city_name","cities",["name"])
- op.create_table("characters",sa.Column("id",sa.Uuid(),primary_key=True),sa.Column("account_id",sa.Uuid(),sa.ForeignKey("accounts.id",ondelete="CASCADE"),nullable=False),sa.Column("name",sa.String(80),nullable=False),sa.Column("level",sa.Integer(),nullable=False),sa.Column("xp",sa.Integer(),nullable=False),sa.Column("reputation",sa.Integer(),nullable=False),sa.Column("status",sa.String(32),nullable=False),sa.Column("country_id",sa.Uuid(),sa.ForeignKey("countries.id",ondelete="RESTRICT")),sa.Column("city_id",sa.Uuid(),sa.ForeignKey("cities.id",ondelete="RESTRICT"));op.create_index("ix_characters_account_id","characters",["account_id"])
- op.create_table("wallets",sa.Column("id",sa.Uuid(),primary_key=True),sa.Column("character_id",sa.Uuid(),sa.ForeignKey("characters.id",ondelete="CASCADE"),nullable=False),sa.Column("currency_id",sa.Uuid(),sa.ForeignKey("currencies.id",ondelete="RESTRICT"),nullable=False),sa.Column("balance",sa.Numeric(18,2),nullable=False))
- op.create_table("jobs",sa.Column("id",sa.Uuid(),primary_key=True),sa.Column("code",sa.String(64),nullable=False),sa.Column("name",sa.String(120),nullable=False),sa.Column("min_level",sa.Integer(),nullable=False));op.create_index("ix_jobs_code","jobs",["code"],unique=True)
- op.create_table("items",sa.Column("id",sa.Uuid(),primary_key=True),sa.Column("code",sa.String(64),nullable=False),sa.Column("name",sa.String(120),nullable=False));op.create_index("ix_items_code","items",["code"],unique=True)
- op.create_table("inventories",sa.Column("id",sa.Uuid(),primary_key=True),sa.Column("character_id",sa.Uuid(),sa.ForeignKey("characters.id",ondelete="CASCADE"),nullable=False),sa.Column("item_id",sa.Uuid(),sa.ForeignKey("items.id",ondelete="RESTRICT"),nullable=False),sa.Column("quantity",sa.Integer(),nullable=False),sa.UniqueConstraint("character_id","item_id",name="uq_inventory_character_item"))
- op.create_table("missions",sa.Column("id",sa.Uuid(),primary_key=True),sa.Column("code",sa.String(64),nullable=False),sa.Column("name",sa.String(120),nullable=False));op.create_index("ix_missions_code","missions",["code"],unique=True)
- op.create_table("npcs",sa.Column("id",sa.Uuid(),primary_key=True),sa.Column("name",sa.String(120),nullable=False),sa.Column("city_id",sa.Uuid(),sa.ForeignKey("cities.id",ondelete="RESTRICT")))
- op.create_table("game_events",sa.Column("id",sa.Uuid(),primary_key=True),sa.Column("event_type",sa.String(64),nullable=False),sa.Column("state",sa.String(32),nullable=False),sa.Column("scheduled_at",sa.DateTime(timezone=True),nullable=False),sa.Column("payload",sa.Text(),nullable=False))
- op.create_table("audit_logs",sa.Column("id",sa.Uuid(),primary_key=True),sa.Column("actor_type",sa.String(32),nullable=False),sa.Column("actor_id",sa.String(128)),sa.Column("action",sa.String(128),nullable=False),sa.Column("entity_type",sa.String(64),nullable=False),sa.Column("entity_id",sa.String(128),nullable=False),sa.Column("created_at",sa.DateTime(timezone=True),nullable=False),sa.Column("details",sa.Text(),nullable=False))
+    op.create_table("accounts",
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("username", sa.String(64), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False))
+    op.create_index("ix_accounts_username", "accounts", ["username"], unique=True)
+
+    op.create_table("account_identities",
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("account_id", sa.Uuid(), sa.ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("provider", sa.String(32), nullable=False),
+        sa.Column("external_id", sa.String(128), nullable=False),
+        sa.UniqueConstraint("provider", "external_id", name="uq_identity_provider_external"))
+
+    op.create_table("currencies",
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("code", sa.String(3), nullable=False),
+        sa.Column("name", sa.String(80), nullable=False),
+        sa.Column("symbol", sa.String(8), nullable=False))
+    op.create_index("ix_currencies_code", "currencies", ["code"], unique=True)
+
+    op.create_table("countries",
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("iso2", sa.String(2), nullable=False),
+        sa.Column("iso3", sa.String(3), nullable=False),
+        sa.Column("name", sa.String(120), nullable=False),
+        sa.Column("capital", sa.String(120), nullable=False),
+        sa.Column("region", sa.String(80), nullable=False),
+        sa.Column("currency_code", sa.String(3), nullable=False),
+        sa.Column("languages", sa.Text(), nullable=False),
+        sa.Column("population", sa.Integer(), nullable=False),
+        sa.Column("cost_of_living_index", sa.Numeric(8, 2), nullable=False))
+    op.create_index("ix_countries_iso2", "countries", ["iso2"], unique=True)
+    op.create_index("ix_countries_iso3", "countries", ["iso3"], unique=True)
+
+    op.create_table("cities",
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("country_id", sa.Uuid(), sa.ForeignKey("countries.id", ondelete="RESTRICT"), nullable=False),
+        sa.Column("name", sa.String(120), nullable=False),
+        sa.Column("region", sa.String(120), nullable=False),
+        sa.Column("population", sa.Integer(), nullable=False),
+        sa.Column("cost_of_living_index", sa.Numeric(8, 2), nullable=False),
+        sa.UniqueConstraint("country_id", "name", name="uq_city_country_name"))
+    op.create_index("ix_cities_country_id", "cities", ["country_id"])
+    op.create_index("ix_city_name", "cities", ["name"])
+
+    op.create_table("characters",
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("account_id", sa.Uuid(), sa.ForeignKey("accounts.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("name", sa.String(80), nullable=False),
+        sa.Column("level", sa.Integer(), nullable=False),
+        sa.Column("xp", sa.Integer(), nullable=False),
+        sa.Column("reputation", sa.Integer(), nullable=False),
+        sa.Column("status", sa.String(32), nullable=False),
+        sa.Column("country_id", sa.Uuid(), sa.ForeignKey("countries.id", ondelete="RESTRICT")),
+        sa.Column("city_id", sa.Uuid(), sa.ForeignKey("cities.id", ondelete="RESTRICT")))
+    op.create_index("ix_characters_account_id", "characters", ["account_id"])
+
+    op.create_table("wallets",
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("character_id", sa.Uuid(), sa.ForeignKey("characters.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("currency_id", sa.Uuid(), sa.ForeignKey("currencies.id", ondelete="RESTRICT"), nullable=False),
+        sa.Column("balance", sa.Numeric(18, 2), nullable=False))
+    op.create_index("ix_wallets_character_id", "wallets", ["character_id"], unique=True)
+
+    for table in ["jobs", "items", "missions"]:
+        op.create_table(table,
+            sa.Column("id", sa.Uuid(), primary_key=True),
+            sa.Column("code", sa.String(64), nullable=False),
+            sa.Column("name", sa.String(120), nullable=False))
+        op.create_index(f"ix_{table}_code", table, ["code"], unique=True)
+    op.add_column("jobs", sa.Column("min_level", sa.Integer(), nullable=False, server_default="1"))
+
+    op.create_table("inventories",
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("character_id", sa.Uuid(), sa.ForeignKey("characters.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("item_id", sa.Uuid(), sa.ForeignKey("items.id", ondelete="RESTRICT"), nullable=False),
+        sa.Column("quantity", sa.Integer(), nullable=False),
+        sa.UniqueConstraint("character_id", "item_id", name="uq_inventory_character_item"))
+
+    op.create_table("npcs",
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("name", sa.String(120), nullable=False),
+        sa.Column("city_id", sa.Uuid(), sa.ForeignKey("cities.id", ondelete="RESTRICT")))
+
+    op.create_table("game_events",
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("event_type", sa.String(64), nullable=False),
+        sa.Column("state", sa.String(32), nullable=False),
+        sa.Column("scheduled_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("payload", sa.Text(), nullable=False))
+
+    op.create_table("audit_logs",
+        sa.Column("id", sa.Uuid(), primary_key=True),
+        sa.Column("actor_type", sa.String(32), nullable=False),
+        sa.Column("actor_id", sa.String(128)),
+        sa.Column("action", sa.String(128), nullable=False),
+        sa.Column("entity_type", sa.String(64), nullable=False),
+        sa.Column("entity_id", sa.String(128), nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+        sa.Column("details", sa.Text(), nullable=False))
+
 def downgrade():
- for t in ["audit_logs","game_events","npcs","missions","inventories","items","jobs","wallets","characters","cities","countries","currencies","account_identities","accounts"]:op.drop_table(t)
+    for table in ["audit_logs", "game_events", "npcs", "inventories", "missions", "items", "jobs",
+                  "wallets", "characters", "cities", "countries", "currencies", "account_identities", "accounts"]:
+        op.drop_table(table)
