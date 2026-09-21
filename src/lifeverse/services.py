@@ -242,7 +242,7 @@ class SkillService:
             )
         )
         if not row:
-            row = CharacterSkill(character_id=character_id, skill_id=skill_id)
+            row = CharacterSkill(character_id=character_id, skill_id=skill_id, level=0, xp=0)
             s.add(row)
         row.xp += amount
         row.level = min(skill.max_level, row.xp // 100)
