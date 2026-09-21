@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import json
 import secrets
 from datetime import UTC, datetime, timedelta
@@ -10,6 +13,8 @@ from sqlalchemy import select, update
 
 from .models import (
     AIIntent,
+    Account,
+    AuthSession,
     AuditLog,
     Business,
     BusinessEmployee,
@@ -397,3 +402,64 @@ class PerformanceService:
     def explainable_page(self, s, query, offset=0, limit=50):
         rows = self.paginate(s, query, offset, limit)
         return {"items": rows, "offset": offset, "limit": limit, "count": len(rows)}
+
+
+class AuthService:
+    def set_password(self, s, account_id, password):
+        if len(password) < 12 or len(password) > 256:
+            raise ValueError("password must contain 12-256 characters")
+        account = s.get(Account, account_id)
+        if not account:
+            raise ValueError("account not found")
+        salt = secrets.token_bytes(16)
+        digest = hashlib.scrypt(
+            password.encode("utf-8"),
+            salt=salt,
+            n=2**15,
+            r=8,
+            p=3,
+        )
+        account.password_hash = "scrypt$32768$8$3$" + base64.urlsafe_b64encode(salt).decode() + "$" + base64.urlsafe_b64encode(digest).decode()
+        s.commit()
+        return account
+
+    def verify_password(self, account, password):
+        if not account.password_hash:
+            return False
+        try:
+            _, n, r, p, salt_text, digest_text = account.password_hash.split("$")
+            salt = base64.urlsafe_b64decode(salt_text.encode())
+            expected = base64.urlsafe_b64decode(digest_text.encode())
+            actual = hashlib.scrypt(password.encode("utf-8"), salt=salt, n=int(n), r=int(r), p=int(p))
+            return hmac.compare_digest(actual, expected)
+        except (ValueError, TypeError):
+            return False
+
+    def login(self, s, username, password, ttl_seconds=3600):
+        account = s.scalar(select(Account).where(Account.username == username.strip()))
+        if not account or not self.verify_password(account, password):
+            raise ValueError("invalid credentials")
+        token = secrets.token_urlsafe(48)
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        session = AuthSession(
+            account_id=account.id,
+            token_hash=token_hash,
+            expires_at=datetime.now(UTC) + timedelta(seconds=ttl_seconds),
+        )
+        s.add(session)
+        s.commit()
+        return token, session
+
+    def authenticate(self, s, token):
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        session = s.scalar(select(AuthSession).where(AuthSession.token_hash == token_hash))
+        if not session or session.revoked_at or session.expires_at <= datetime.now(UTC):
+            raise ValueError("invalid or expired session")
+        return session.account_id
+
+    def revoke(self, s, token):
+        token_hash = hashlib.sha256(token.encode()).hexdigest()
+        session = s.scalar(select(AuthSession).where(AuthSession.token_hash == token_hash))
+        if session:
+            session.revoked_at = datetime.now(UTC)
+            s.commit()
