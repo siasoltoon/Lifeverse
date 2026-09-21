@@ -27,3 +27,5 @@ jobs:
         run: pytest --cov=lifeverse --cov-report=term-missing
       - name: Migration smoke test
         run: alembic upgrade head
+      - name: Container build
+        run: docker build -t lifeverse-ci .
