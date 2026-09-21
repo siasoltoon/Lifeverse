@@ -10,6 +10,7 @@ depends_on = None
 
 
 def upgrade():
+    op.add_column("businesses", sa.Column("currency_id", sa.Uuid(), sa.ForeignKey("currencies.id", ondelete="RESTRICT"), nullable=True))
     op.create_table(
         "event_definitions",
         sa.Column("id", sa.Uuid(), primary_key=True),
@@ -102,6 +103,7 @@ def upgrade():
 
 
 def downgrade():
+    op.drop_column("businesses", "currency_id")
     op.drop_index("ix_exploit_signals_character_state", table_name="exploit_signals")
     op.drop_index("ix_ai_intents_state", table_name="ai_intents")
     op.drop_index("ix_market_listings_open_item", table_name="market_listings")
