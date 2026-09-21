@@ -456,6 +456,8 @@ class SecurityService:
             raise ValueError("invalid rate limit")
         now = now or datetime.now(UTC)
         row = s.get(RateLimitBucket, key)
+        if row and row.window_started_at.tzinfo is None:
+            row.window_started_at = row.window_started_at.replace(tzinfo=UTC)
         if not row or now - row.window_started_at >= timedelta(seconds=window_seconds):
             row = RateLimitBucket(key=key, window_started_at=now, count=0, limit_value=limit_value)
             s.merge(row)
@@ -491,12 +493,12 @@ class AuthService:
         digest = hashlib.scrypt(
             password.encode("utf-8"),
             salt=salt,
-            n=2**15,
+            n=2**14,
             r=8,
-            p=3,
+            p=5,
         )
         account.password_hash = (
-            "scrypt$32768$8$3$"
+            "scrypt$16384$8$5$"
             + base64.urlsafe_b64encode(salt).decode()
             + "$"
             + base64.urlsafe_b64encode(digest).decode()
@@ -512,7 +514,12 @@ class AuthService:
             salt = base64.urlsafe_b64decode(salt_text.encode())
             expected = base64.urlsafe_b64decode(digest_text.encode())
             actual = hashlib.scrypt(
-                password.encode("utf-8"), salt=salt, n=int(n), r=int(r), p=int(p)
+                password.encode("utf-8"),
+                salt=salt,
+                n=int(n),
+                r=int(r),
+                p=int(p),
+                maxmem=64 * 1024 * 1024,
             )
             return hmac.compare_digest(actual, expected)
         except (ValueError, TypeError):
