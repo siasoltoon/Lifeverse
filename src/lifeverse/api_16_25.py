@@ -19,7 +19,16 @@ from .services_16_25 import (
     AuthService,
 )
 
-security = SecurityService()\n\n\ndef rate_limit(request: Request, session: Session = Depends(get_session)):\n    key = "api:" + (request.client.host if request.client else "unknown")\n    if not security.allow(session, key, 120, 60):\n        raise HTTPException(429, "rate limit exceeded")\n\n\nrouter = APIRouter(prefix="/v1", dependencies=[Depends(rate_limit)])
+security = SecurityService()
+
+
+def rate_limit(request: Request, session: Session = Depends(get_session)):
+    key = "api:" + (request.client.host if request.client else "unknown")
+    if not security.allow(session, key, 120, 60):
+        raise HTTPException(429, "rate limit exceeded")
+
+
+router = APIRouter(prefix="/v1", dependencies=[Depends(rate_limit)])
 events = EventService()
 businesses = BusinessService()
 market = MarketService()
@@ -48,7 +57,8 @@ class BusinessRequest(BaseModel):
     city_id: UUID
     name: str = Field(min_length=1, max_length=120)
     kind: str = Field(min_length=1, max_length=64)
-    currency_id: UUID\n    capital: Decimal = Field(default=Decimal("0"), ge=0)
+    currency_id: UUID
+    capital: Decimal = Field(default=Decimal("0"), ge=0)
 
 
 class ListingRequest(BaseModel):
