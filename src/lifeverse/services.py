@@ -293,6 +293,23 @@ class SkillService:
 
 
 class InventoryService:
+    def add_in_session(self, s, character_id, item_id, quantity):
+        if quantity <= 0:
+            raise ValueError("quantity must be positive")
+        if not s.get(Character, character_id) or not s.get(Item, item_id):
+            raise ValueError("character or item not found")
+        row = s.scalar(
+            select(Inventory).where(
+                Inventory.character_id == character_id, Inventory.item_id == item_id
+            )
+        )
+        if not row:
+            row = Inventory(character_id=character_id, item_id=item_id, quantity=0)
+            s.add(row)
+            s.flush()
+        row.quantity += quantity
+        return row
+
     def add(self, s, character_id, item_id, quantity):
         if quantity <= 0:
             raise ValueError("quantity must be positive")

@@ -101,7 +101,9 @@ class Wallet(Base):
     character_id: Mapped[UUID] = mapped_column(
         ForeignKey("characters.id", ondelete="CASCADE"), unique=True
     )
-    currency_id: Mapped[UUID] = mapped_column(ForeignKey("currencies.id", ondelete="RESTRICT"))
+    currency_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("currencies.id", ondelete="RESTRICT")
+    )
     balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
 
 
@@ -336,6 +338,7 @@ class Business(Base):
     name: Mapped[str] = mapped_column(String(120))
     kind: Mapped[str] = mapped_column(String(64))
     balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    currency_id: Mapped[UUID] = mapped_column(ForeignKey("currencies.id", ondelete="RESTRICT"))
 
 
 class GameEvent(Base):
@@ -358,3 +361,110 @@ class AuditLog(Base):
     entity_id: Mapped[str] = mapped_column(String(128))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     details: Mapped[str] = mapped_column(Text, default="{}")
+
+
+class EventDefinition(Base):
+    __tablename__ = "event_definitions"
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    code: Mapped[str] = mapped_column(String(64), unique=True)
+    name: Mapped[str] = mapped_column(String(120))
+    category: Mapped[str] = mapped_column(String(32))
+    repeatable: Mapped[bool] = mapped_column(default=False)
+    cooldown_seconds: Mapped[int] = mapped_column(Integer, default=0)
+    enabled: Mapped[bool] = mapped_column(default=True)
+
+
+class BusinessEmployee(Base):
+    __tablename__ = "business_employees"
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    business_id: Mapped[UUID] = mapped_column(ForeignKey("businesses.id", ondelete="CASCADE"))
+    character_id: Mapped[UUID] = mapped_column(ForeignKey("characters.id", ondelete="CASCADE"))
+    wage: Mapped[Decimal] = mapped_column(Numeric(18, 2), default=Decimal("0"))
+    status: Mapped[str] = mapped_column(String(32), default="active")
+    __table_args__ = (UniqueConstraint("business_id", "character_id", name="uq_business_employee"),)
+
+
+class MarketOrder(Base):
+    __tablename__ = "market_orders"
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    listing_id: Mapped[UUID] = mapped_column(ForeignKey("market_listings.id", ondelete="RESTRICT"))
+    buyer_character_id: Mapped[UUID] = mapped_column(
+        ForeignKey("characters.id", ondelete="CASCADE")
+    )
+    quantity: Mapped[int] = mapped_column(Integer)
+    total_price: Mapped[Decimal] = mapped_column(Numeric(18, 2))
+    idempotency_key: Mapped[str] = mapped_column(String(128), unique=True)
+    status: Mapped[str] = mapped_column(String(32), default="completed")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+
+class LawCase(Base):
+    __tablename__ = "law_cases"
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    character_id: Mapped[UUID] = mapped_column(ForeignKey("characters.id", ondelete="CASCADE"))
+    category: Mapped[str] = mapped_column(String(64))
+    severity: Mapped[int] = mapped_column(Integer, default=1)
+    state: Mapped[str] = mapped_column(String(32), default="open")
+    evidence: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+
+class CombatSession(Base):
+    __tablename__ = "combat_sessions"
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    attacker_id: Mapped[UUID] = mapped_column(ForeignKey("characters.id", ondelete="CASCADE"))
+    defender_id: Mapped[UUID] = mapped_column(ForeignKey("characters.id", ondelete="CASCADE"))
+    state: Mapped[str] = mapped_column(String(32), default="active")
+    turn: Mapped[int] = mapped_column(Integer, default=1)
+    seed: Mapped[int] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+
+class AIIntent(Base):
+    __tablename__ = "ai_intents"
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    actor_id: Mapped[UUID | None] = mapped_column(ForeignKey("characters.id", ondelete="SET NULL"))
+    intent_type: Mapped[str] = mapped_column(String(64))
+    payload: Mapped[str] = mapped_column(Text, default="{}")
+    state: Mapped[str] = mapped_column(String(32), default="proposed")
+    rejection_reason: Mapped[str | None] = mapped_column(String(255))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+
+class Translation(Base):
+    __tablename__ = "translations"
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    locale: Mapped[str] = mapped_column(String(8))
+    key: Mapped[str] = mapped_column(String(128))
+    value: Mapped[str] = mapped_column(Text)
+    __table_args__ = (UniqueConstraint("locale", "key", name="uq_translation_locale_key"),)
+
+
+class ExploitSignal(Base):
+    __tablename__ = "exploit_signals"
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    character_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("characters.id", ondelete="SET NULL")
+    )
+    rule: Mapped[str] = mapped_column(String(64))
+    severity: Mapped[int] = mapped_column(Integer)
+    evidence: Mapped[str] = mapped_column(Text, default="{}")
+    state: Mapped[str] = mapped_column(String(32), default="open")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+
+
+class RateLimitBucket(Base):
+    __tablename__ = "rate_limit_buckets"
+    key: Mapped[str] = mapped_column(String(128), primary_key=True)
+    window_started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    count: Mapped[int] = mapped_column(Integer, default=0)
+    limit_value: Mapped[int] = mapped_column(Integer)
+
+
+class AuthSession(Base):
+    __tablename__ = "auth_sessions"
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    account_id: Mapped[UUID] = mapped_column(ForeignKey("accounts.id", ondelete="CASCADE"))
+    token_hash: Mapped[str] = mapped_column(String(128), unique=True)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

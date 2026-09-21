@@ -1,6 +1,6 @@
 # PHASE STATE
-Phase 15 — Missions & Quests
+Phase 25 — Performance & Scalability
 Status: COMPLETED
-Phases 6–15 are implemented with persistent models, migrations, application services, API transport and regression coverage.
-Verified quality gates: Ruff format PASS; Ruff lint PASS; pytest PASS (12 passed); Alembic upgrade head PASS.
-Next phase: Phase 16 — Events.
+Phases 16–25 are implemented, regression-tested and verified through CI and migration smoke testing.
+Verified quality gates: Ruff format PASS; Ruff lint PASS; pytest PASS (17 passed); Alembic upgrade head PASS.
+Next phase: Phase 26 — Background Jobs & Scheduler.
