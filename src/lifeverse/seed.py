@@ -141,3 +141,31 @@ def seed():
 
 if __name__ == "__main__":
     seed()
+
+
+def seed_phase_16_25(session):
+    from .models import EventDefinition, Translation
+
+    events = [
+        ("market_shift", "Market Shift", "economic"),
+        ("city_festival", "City Festival", "city"),
+        ("social_wave", "Social Wave", "social"),
+        ("weather_random", "Weather Event", "random"),
+        ("season_change", "Season Change", "seasonal"),
+        ("world_news", "World News", "world"),
+        ("player_milestone", "Player Milestone", "player"),
+    ]
+    for code, name, category in events:
+        if not session.scalar(select(EventDefinition).where(EventDefinition.code == code)):
+            session.add(EventDefinition(code=code, name=name, category=category, repeatable=True))
+    translations = {
+        ("en", "common.ok"): "OK",
+        ("en", "event.dispatched"): "Event dispatched",
+        ("fa", "common.ok"): "تأیید",
+        ("fa", "event.dispatched"): "رویداد اجرا شد",
+    }
+    for (locale, key), value in translations.items():
+        row = session.scalar(select(Translation).where(Translation.locale == locale, Translation.key == key))
+        if not row:
+            session.add(Translation(locale=locale, key=key, value=value))
+    session.commit()
