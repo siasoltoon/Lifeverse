@@ -1,8 +1,11 @@
 from datetime import UTC, datetime, timedelta
 
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 
 from lifeverse.api import app
+from lifeverse.db import Base, get_session
 from lifeverse.jobs import JobRecord, JobService, Worker
 from lifeverse.observability import metrics, readiness
 from lifeverse.production import profile
@@ -61,8 +64,18 @@ def test_readiness_metrics_and_deployment_profiles(session):
 
 
 def test_health_endpoint_is_database_backed():
+    engine = create_engine("sqlite://", connect_args={"check_same_thread": False})
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    def override():
+        with Session() as db:
+            yield db
+    app.dependency_overrides[get_session] = override
     client = TestClient(app)
     response = client.get("/health")
+    app.dependency_overrides.clear()
+    Base.metadata.drop_all(engine)
+    engine.dispose()
     assert response.status_code == 200
     assert response.json()["database"] == "ok"
 
