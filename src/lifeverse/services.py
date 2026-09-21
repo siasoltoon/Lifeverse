@@ -1,6 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from sqlalchemy import select
+
 from .domain import level_for_xp, validate_character_name, validate_location
 
 from .models import (
