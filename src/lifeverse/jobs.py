@@ -6,7 +6,7 @@ import secrets
 from datetime import UTC, datetime, timedelta
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Index, Integer, String, Text, select
+from sqlalchemy import DateTime, Index, Integer, String, Text, select, update
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
@@ -92,24 +92,31 @@ class JobService:
             raise ValueError("worker_id is required")
         now = now or datetime.now(UTC)
         self.recover_expired(session, lease_seconds, now)
-        row = session.scalar(
-            select(JobRecord)
+        candidate = session.scalar(
+            select(JobRecord.id)
             .where(JobRecord.status == "queued", JobRecord.run_at <= now)
             .order_by(JobRecord.run_at, JobRecord.created_at)
             .limit(1)
         )
-        if not row:
+        if not candidate:
             return None
-        row.status = "running"
-        row.locked_by = worker_id
-        row.locked_at = now
-        row.attempts += 1
-        row.updated_at = now
+        claim = (
+            update(JobRecord)
+            .where(JobRecord.id == candidate, JobRecord.status == "queued")
+            .values(
+                status="running",
+                locked_by=self.worker_id,
+                locked_at=now,
+                attempts=JobRecord.attempts + 1,
+                updated_at=now,
+            )
+        )
+        result = session.execute(claim)
+        if result.rowcount != 1:
+            session.rollback()
+            return None
         session.commit()
-        session.refresh(row)
-        return row
-
-    def complete(self, session, job_id, worker_id):
+        return session.get(JobRecord, candidate)    def complete(self, session, job_id, worker_id):
         row = session.get(JobRecord, job_id)
         if not row or row.status != "running" or row.locked_by != worker_id:
             raise ValueError("job lease is not owned by worker")
@@ -131,7 +138,8 @@ class JobService:
         row.updated_at = now
         if row.attempts < row.max_attempts:
             row.status = "queued"
-            row.run_at = now + timedelta(seconds=max(0, retry_delay_seconds))
+            delay = max(0, retry_delay_seconds) * (2 ** max(0, row.attempts - 1))
+            row.run_at = now + timedelta(seconds=delay)
         else:
             row.status = "dead"
         session.commit()
