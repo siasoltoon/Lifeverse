@@ -116,7 +116,9 @@ class JobService:
             session.rollback()
             return None
         session.commit()
-        return session.get(JobRecord, candidate)    def complete(self, session, job_id, worker_id):
+        return session.get(JobRecord, candidate)
+
+    def complete(self, session, job_id, worker_id):
         row = session.get(JobRecord, job_id)
         if not row or row.status != "running" or row.locked_by != worker_id:
             raise ValueError("job lease is not owned by worker")
