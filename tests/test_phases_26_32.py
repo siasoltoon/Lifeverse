@@ -37,7 +37,11 @@ def test_job_idempotency_claim_retry_and_completion(session):
 def test_job_recovery_and_dead_letter(session):
     service = JobService()
     row = service.enqueue(
-        session, "test.fail", run_at=datetime.now(UTC), idempotency_key="dead-letter", max_attempts=1
+        session,
+        "test.fail",
+        run_at=datetime.now(UTC),
+        idempotency_key="dead-letter",
+        max_attempts=1,
     )
     claimed = service.claim(session, "worker-a")
     assert claimed.id == row.id
@@ -71,6 +75,7 @@ def test_health_endpoint_is_database_backed():
     def override():
         with Session() as db:
             yield db
+
     app.dependency_overrides[get_session] = override
     client = TestClient(app)
     response = client.get("/health")
