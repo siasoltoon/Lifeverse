@@ -105,9 +105,16 @@ class EventService:
 
 
 class BusinessService:
-    def create(self, s, owner_character_id, city_id, name, kind, currency_id, capital=Decimal("0")):
+    def create(self, s, owner_character_id, city_id, name, kind, currency_id, capital=Decimal("0"), economy=None):
         if not s.get(Character, owner_character_id):
             raise ValueError("owner not found")
+        if capital > 0:
+            if economy is None:
+                raise ValueError("economy service is required for funded businesses")
+            wallet = s.scalar(select(Wallet).where(Wallet.character_id == owner_character_id))
+            if not wallet or wallet.currency_id != currency_id:
+                raise ValueError("owner wallet currency mismatch")
+            economy._apply_move(s, owner_character_id, -Decimal(str(capital)), f"business-capital:{owner_character_id}:{name}", "business capital")
         row = Business(
             owner_character_id=owner_character_id,
             city_id=city_id,
