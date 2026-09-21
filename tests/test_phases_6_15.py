@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 from lifeverse.models import Character, City, Currency, Item, Job, Mission, Skill
@@ -8,7 +8,6 @@ from lifeverse.services import (
     InventoryService,
     MissionService,
     PlayerService,
-    PropertyService,
     SkillService,
     SocialService,
     TravelService,
@@ -64,7 +63,7 @@ def setup_character(session):
 def test_world_clock_persists(session):
     c, _ = setup_character(session)
     w = WorldService()
-    first = w.initialize(session, datetime(2026, 1, 1, tzinfo=timezone.utc))
+    first = w.initialize(session, datetime(2026, 1, 1, tzinfo=UTC))
     w.advance(session, 60)
     session.expire_all()
     second = session.get(type(first), 1)
@@ -109,6 +108,6 @@ def test_travel_requires_distinct_destination(session):
     )
     session.add(other)
     session.commit()
-    t = TravelService().schedule(session, c.id, other.id, datetime.now(timezone.utc), 10)
+    t = TravelService().schedule(session, c.id, other.id, datetime.now(UTC), 10)
     TravelService().complete(session, t.id)
     assert session.get(Character, c.id).city_id == other.id
