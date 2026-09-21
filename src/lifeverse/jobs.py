@@ -27,8 +27,12 @@ class JobRecord(Base):
     locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     idempotency_key: Mapped[str] = mapped_column(String(160), unique=True)
     last_error: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=lambda: datetime.now(UTC)
+    )
     __table_args__ = (
         Index("ix_background_jobs_claim", "status", "run_at"),
         Index("ix_background_jobs_lock", "status", "locked_at"),
@@ -38,7 +42,9 @@ class JobRecord(Base):
 class JobService:
     VALID_STATES = {"queued", "running", "completed", "failed", "dead"}
 
-    def enqueue(self, session, job_type, payload=None, run_at=None, idempotency_key=None, max_attempts=5):
+    def enqueue(
+        self, session, job_type, payload=None, run_at=None, idempotency_key=None, max_attempts=5
+    ):
         if not job_type or len(job_type) > 96:
             raise ValueError("invalid job type")
         if max_attempts < 1 or max_attempts > 20:
@@ -66,9 +72,13 @@ class JobService:
             raise ValueError("lease_seconds must be positive")
         now = now or datetime.now(UTC)
         cutoff = now - timedelta(seconds=lease_seconds)
-        rows = list(session.scalars(select(JobRecord).where(
-            JobRecord.status == "running", JobRecord.locked_at < cutoff
-        )))
+        rows = list(
+            session.scalars(
+                select(JobRecord).where(
+                    JobRecord.status == "running", JobRecord.locked_at < cutoff
+                )
+            )
+        )
         for row in rows:
             row.status = "queued"
             row.locked_by = None
