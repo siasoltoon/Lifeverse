@@ -29,7 +29,7 @@ OBS-01 / durable worker heartbeat:
 - Existing warnings retained; no tests weakened.
 
 OBS-02 centralized metrics and monitoring:
-- CI run 43121145977 on commit 43b3b6bc41295efe79703b7b02ebf8754e96bb77.
+- CI run 43121685847 on commit 38e53d1db0eb27e27b4b588ef5062c61c5cfbff0.
 - Ruff format: PASS.
 - Ruff lint: PASS.
 - pytest: PASS — 60 passed in 3.94s.
