@@ -57,19 +57,22 @@ jobs:
           printf '%s' 'lifeverse-ci-metrics-token-not-a-real-secret' > /tmp/lifeverse-ci-secrets/metrics_token
           printf '%s' 'http://127.0.0.1:9999/alertmanager-test' > /tmp/lifeverse-ci-secrets/alert_webhook_url
           docker run --rm \
+            --entrypoint promtool \
             -v "$PWD/monitoring:/etc/prometheus:ro" \
             -v "/tmp/lifeverse-ci-secrets:/run/secrets:ro" \
             prom/prometheus:v3.5.0 \
-            promtool check config /etc/prometheus/prometheus.yml
+            check config /etc/prometheus/prometheus.yml
           docker run --rm \
+            --entrypoint promtool \
             -v "$PWD/monitoring:/etc/prometheus:ro" \
             -v "/tmp/lifeverse-ci-secrets:/run/secrets:ro" \
             prom/prometheus:v3.5.0 \
-            promtool check rules /etc/prometheus/alert_rules.yml
+            check rules /etc/prometheus/alert_rules.yml
           docker run --rm \
+            --entrypoint amtool \
             -v "$PWD/monitoring:/etc/alertmanager:ro" \
             -v "/tmp/lifeverse-ci-secrets:/run/secrets:ro" \
             prom/alertmanager:v0.28.1 \
-            amtool check-config /etc/alertmanager/alertmanager.yml
+            check-config /etc/alertmanager/alertmanager.yml
       - name: Container build
         run: docker build -t lifeverse-ci .
