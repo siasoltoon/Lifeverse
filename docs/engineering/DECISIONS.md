@@ -24,3 +24,5 @@ D-0022 Readiness is database-backed; operational logs/metrics are separate from 
 D-0023 Deployment topology is portable: API, worker and migration processes can be independently deployed against the same configured database.
 D-0024 PostgreSQL production connectivity uses psycopg 3 through SQLAlchemy; SQLite remains the local development/test default. Standard PostgreSQL URLs are normalized centrally. Supabase Session Pooler is the IPv4-compatible option; Direct is preferred when the runtime has IPv6. Supabase Data API is not part of the backend SQLAlchemy access path.
 D-0025 Application runtime must use a restricted PostgreSQL role; project-owner credentials are reserved for controlled administration/migrations and must never be shipped to clients.
+
+D-0026 Operational counters are thread-safe but process-local. They are not a global source of truth and are not exposed publicly; centralized export and alerting require an authenticated multi-process design.

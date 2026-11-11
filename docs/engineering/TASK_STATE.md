@@ -1,22 +1,37 @@
 # TASK STATE
-Current task: OPS-DB-02 — actual Supabase Session Pooler acceptance
-Status: ACCEPTANCE CHECKS PASS; production operational readiness remains pending.
+Current task: OPS-DB-03 — operational readiness validation
+Status: IN PROGRESS. OBS-01 baseline is implemented and CI verified; overall operational readiness is not complete.
 Branch: feat/postgresql-supabase-support
 PR: https://github.com/siasoltoon/Lifeverse/pull/7 (draft/unmerged)
-OPS-DB-01 PostgreSQL/Supabase compatibility foundation: implementation and CI verification PASS. Verified workflow 43017388284 per latest project continuation record; 28 tests, SQLite and PostgreSQL 16 migrations, PostgreSQL committed persistence smoke, Docker build.
 
-OPS-DB-02 verified against the actual Supabase project on 2026-11-12:
-- Session Pooler (IPv4) configured in local ignored .env; no credentials committed or shared.
+OPS-DB-01 PostgreSQL/Supabase compatibility foundation: implementation and CI verification PASS. Previous verified workflow 43017377284/43017377266 per PR record; 28 tests, SQLite and PostgreSQL 16 migrations, PostgreSQL committed persistence smoke, Docker build.
+
+OPS-DB-02 actual Supabase Session Pooler acceptance (2026-11-12):
 - Administrative migration identity ran alembic upgrade head; 44 public tables and revision 0004_phases_26_32 verified.
-- lifeverse_runtime role verified as non-superuser, non-createdb, non-createrole, no-bypassrls; schema CREATE denied, application-table DML and sequence usage granted, alembic_version DML denied.
-- Runtime-role write/read across independent Python processes PASS; test row cleanup PASS (zero test rows remain).
-- Runtime-role DDL denial probe PASS; no probe table created.
-- API startup and /health PASS (status=ready, database=ok); clean API restart and post-restart /health PASS.
-- Worker --once exit code 0. Queue empty before and after; no real job handler was invoked.
-- Regression: pytest 28 passed.
+- lifeverse_runtime role is non-superuser, non-createdb, non-createrole, no-bypassrls; schema CREATE denied, application-table DML and sequence access allowed, alembic_version access denied.
+- Runtime-role write/read across independent Python processes PASS; test-row cleanup PASS.
+- Runtime-role DDL denial probe PASS.
+- API /health PASS before and after clean API process restart.
+- Worker --once exited 0 with an empty queue; no real job handler was invoked.
+- Client connection TLS encryption verified. CA/hostname certificate verification deferred.
+- Backup/restore/PITR deferred by user decision.
 
-Warnings retained for follow-up: one Starlette/httpx deprecation warning and 45 datetime.datetime.utcnow() deprecation warnings. No tests or assertions were weakened.
+OBS-01 observability baseline:
+- Metrics counters are thread-safe and validate counter/status/duration inputs.
+- API middleware records request totals, 4xx/5xx responses and total/max request latency.
+- API request logs record method, status and duration, excluding paths, query strings, payloads and client addresses.
+- /health/live is database-independent; /health/ready checks DB readiness; /health preserves the previous readiness contract.
+- Worker tracks completed, failed and dead-letter outcomes.
+- docs/operations/OBSERVABILITY.md documents limitations and candidate alert conditions.
+- CI run 43118198244 on commit ee5235efd9fa0da9bc650bc22ade31127fdc5354 PASS: Ruff format, Ruff lint, pytest 43 passed, SQLite migration, PostgreSQL 16 migration, PostgreSQL persistence smoke, Docker build.
+- 46 warnings remain: one Starlette/httpx TestClient deprecation and 45 datetime.utcnow() deprecations. They were not suppressed and no tests were weakened.
 
-Not verified: Supabase-hosted database/service restart or disaster recovery; backup restore/PITR; deployed TLS policy; alert routing; worker business/economy handler execution; production load/concurrency behavior.
+Known limitations / pending:
+- Metrics are process-local, reset on restart and are not shared, persisted or exported. No external alert delivery is configured.
+- Durable worker heartbeat is not implemented.
+- No controlled real worker handler integration test has been run against Supabase.
+- Production load/concurrency and failure/recovery behavior remain unverified.
+- Supabase service/database restart and disaster recovery remain untested.
+- Backup/PITR and CA/hostname certificate validation remain deferred.
 
-Next task: OPS-DB-03 — operational readiness validation: verify backup/PITR and restore, TLS configuration, monitoring/alerts, safe controlled worker handler integration and representative load/concurrency tests. Do not claim production-ready status.
+Exact next task: design secure centralized multi-process metrics export and alert delivery plus durable worker heartbeat. Then run controlled worker-handler integration and representative load/concurrency tests. Do not claim production-ready status.

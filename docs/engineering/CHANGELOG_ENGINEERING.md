@@ -28,3 +28,14 @@
 - Worker --once exited 0 with an empty queue before and after; no production handler was invoked.
 - Regression pytest: 28 passed. Recorded one Starlette/httpx and 45 datetime.utcnow deprecation warnings for follow-up; no tests weakened.
 - Remaining operational readiness work: verify backup/PITR restore, deployed TLS, alert delivery, controlled worker handler integration and load/concurrency.
+
+2026-11-12
+- OPS-DB-03 / OBS-01: added thread-safe process-local request/job metrics with input validation.
+- Added API request status/latency middleware and method/status/duration logs without request paths or payloads.
+- Added database-independent /health/live and database-backed /health/ready; retained /health readiness compatibility.
+- Added completed/failed/dead-letter worker outcome metrics.
+- Added metrics validation, thread-safety, API instrumentation and worker outcome regression tests.
+- Added docs/operations/OBSERVABILITY.md, explicitly documenting that metrics are process-local and no external alert delivery/exporter is configured.
+- CI run 43118198244 on ee5235efd9fa0da9bc650bc22ade31127fdc5354: Ruff format PASS, Ruff lint PASS, pytest 43 passed, SQLite migration PASS, PostgreSQL 16 migration PASS, PostgreSQL persistence smoke PASS, Docker build PASS.
+- First CI attempt caught a Ruff formatting issue in a test; corrected without weakening assertions; complete rerun passed.
+- Remaining OPS-DB-03 work: central multi-process metrics export, alert delivery, durable worker heartbeat, controlled worker handler integration and load/concurrency validation. Backup/PITR and CA/hostname validation remain deferred.
