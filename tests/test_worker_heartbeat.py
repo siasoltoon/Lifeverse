@@ -40,11 +40,14 @@ def test_worker_heartbeat_upsert_and_stale_detection(session):
     stopped = service.stop(session, "worker-test", now=started + timedelta(seconds=61))
     assert stopped.status == "stopped"
     assert stopped.stopped_at.replace(tzinfo=UTC) == started + timedelta(seconds=61)
-    assert service.list_stale(
-        session,
-        stale_after_seconds=20,
-        now=started + timedelta(minutes=5),
-    ) == []
+    assert (
+        service.list_stale(
+            session,
+            stale_after_seconds=20,
+            now=started + timedelta(minutes=5),
+        )
+        == []
+    )
 
 
 def test_worker_exposes_current_job_only_while_handler_runs(session):
