@@ -26,3 +26,4 @@ D-0024 PostgreSQL production connectivity uses psycopg 3 through SQLAlchemy; SQL
 D-0025 Application runtime must use a restricted PostgreSQL role; project-owner credentials are reserved for controlled administration/migrations and must never be shipped to clients.
 
 D-0026 Operational counters are thread-safe but process-local. They are not a global source of truth and are not exposed publicly; centralized export and alerting require an authenticated multi-process design.
+D-0027 Worker liveness is persisted in a dedicated worker_heartbeats table. Each worker reports periodically through an independent DB session, includes its current job when available, and marks clean shutdown; stale detection is query-based and does not itself imply alert delivery.
