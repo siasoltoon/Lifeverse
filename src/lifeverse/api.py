@@ -40,7 +40,7 @@ logger = logging.getLogger("lifeverse.api")
 async def lifespan(app: FastAPI):
     reporter = None
     try:
-        if s.metrics_export_enabled:
+        if s.metrics_publish_enabled:
             reporter = MetricsSnapshotReporter(
                 SessionLocal,
                 f"api-{uuid4().hex}",
