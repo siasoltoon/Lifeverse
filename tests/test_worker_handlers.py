@@ -1,6 +1,7 @@
 import json
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from uuid import uuid4
 
 from sqlalchemy import func, select
 
@@ -14,6 +15,7 @@ from lifeverse.models import (
     Country,
     Currency,
     GameEvent,
+    LedgerAccount,
     Travel,
     Wallet,
 )
@@ -243,3 +245,9 @@ def test_travel_completion_worker_retry_is_idempotent(session):
     assert worker.run_once(session, {"travel.complete": travel_complete}) == str(travel.id)
     assert session.get(JobRecord, job.id).status == "completed"
     assert session.get(Character, character.id).city_id == destination.id
+
+
+
+def test_wallet_ledger_account_code_fits_two_full_uuid_references():
+    code = f"wallet:{uuid4()}:{uuid4()}"
+    assert len(code) <= LedgerAccount.__table__.c.code.type.length

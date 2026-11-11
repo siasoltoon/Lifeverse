@@ -290,7 +290,7 @@ class CharacterMission(Base):
 class LedgerAccount(Base):
     __tablename__ = "ledger_accounts"
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
-    code: Mapped[str] = mapped_column(String(64), unique=True)
+    code: Mapped[str] = mapped_column(String(128), unique=True)
     currency_id: Mapped[UUID] = mapped_column(ForeignKey("currencies.id", ondelete="RESTRICT"))
 
 
