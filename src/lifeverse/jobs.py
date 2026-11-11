@@ -89,6 +89,7 @@ class WorkerHeartbeatService:
         )
         session.execute(statement)
         session.commit()
+        session.expire_all()
         return session.get(WorkerHeartbeat, worker_id)
 
     def stop(self, session, worker_id: str, now=None):
