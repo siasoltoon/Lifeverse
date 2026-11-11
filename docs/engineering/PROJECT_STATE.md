@@ -37,6 +37,7 @@ OBS-02 centralized metrics and monitoring implementation:
 - Added optional Docker Compose monitoring profile for Prometheus and Alertmanager; both management ports bind to localhost.
 - Added five Prometheus alert rules: exporter unavailable, elevated HTTP 5xx ratio, high average latency, stale worker heartbeat and dead-letter jobs.
 - Compose worker now publishes snapshots when enabled, explicitly keeps exporter disabled and does not receive the metrics bearer token.
+- .env.example leaves LIFEVERSE_DATABASE_URL unset by default: local Python retains its relative SQLite default, while Docker Compose selects the persistent /data/lifeverse.db named-volume fallback. Regression coverage for this behavior passed in CI run 43121685847.
 - Alert delivery uses a generic Alertmanager-compatible webhook. Rules/configuration exist, but alerts are NOT active until a real receiver is configured and a delivery test succeeds.
 - docs/operations/OBSERVABILITY.md documents setup and operational limits.
 - CI run 43121685847 on commit 38e53d1db0eb27e27b4b588ef5062c61c5cfbff0: Ruff format PASS; Ruff lint PASS; pytest 60 passed; SQLite migration PASS; PostgreSQL 16 migration PASS; PostgreSQL persistence smoke PASS; Prometheus config PASS; Prometheus rules PASS (5 rules); Alertmanager config PASS; Docker build PASS.
