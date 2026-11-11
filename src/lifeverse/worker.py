@@ -5,8 +5,10 @@ import logging
 import time
 from uuid import UUID
 
+from .config import get_settings
 from .db import SessionLocal
 from .jobs import Worker, WorkerHeartbeatReporter
+from .observability import MetricsSnapshotReporter, metrics
 from .services import TravelService
 from .services_16_25 import BusinessService, EventService
 
@@ -53,8 +55,19 @@ def main():
         lambda: worker.current_job_id,
         interval_seconds=args.heartbeat_interval,
     )
-    reporter.start()
+    metrics_reporter = None
     try:
+        reporter.start()
+        settings = get_settings()
+        if settings.metrics_export_enabled:
+            metrics_reporter = MetricsSnapshotReporter(
+                SessionLocal,
+                worker.worker_id,
+                "worker",
+                metrics.snapshot,
+                interval_seconds=settings.metrics_publish_interval_seconds,
+            )
+            metrics_reporter.start()
         while True:
             with SessionLocal() as session:
                 worker.run_once(session, handlers)
@@ -64,6 +77,8 @@ def main():
     except KeyboardInterrupt:
         logger.info("worker_shutdown_requested worker_id=%s", worker.worker_id)
     finally:
+        if metrics_reporter:
+            metrics_reporter.stop()
         reporter.stop()
 
 

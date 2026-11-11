@@ -1,0 +1,57 @@
+groups:
+  - name: lifeverse-operational
+    rules:
+      - alert: LifeVerseMetricsExporterUnavailable
+        expr: up{job="lifeverse"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: LifeVerse metrics exporter is unavailable
+          description: Prometheus cannot scrape the authenticated LifeVerse metrics endpoint.
+
+      - alert: LifeVerseHighHTTP5xxRate
+        expr: |
+          (
+            sum(rate(lifeverse_http_requests_5xx_total[5m]))
+            /
+            clamp_min(sum(rate(lifeverse_http_requests_total[5m])), 0.001)
+          ) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: LifeVerse HTTP 5xx rate is elevated
+          description: More than 5% of HTTP requests have failed with 5xx responses for five minutes.
+
+      - alert: LifeVerseHighAverageRequestLatency
+        expr: |
+          (
+            sum(rate(lifeverse_http_request_duration_ms_total[5m]))
+            /
+            clamp_min(sum(rate(lifeverse_http_requests_total[5m])), 0.001)
+          ) > 1000
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: LifeVerse average request latency is high
+          description: Average HTTP request duration exceeded one second for five minutes.
+
+      - alert: LifeVerseWorkerHeartbeatStale
+        expr: lifeverse_worker_heartbeats_stale > 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: A LifeVerse worker heartbeat is stale
+          description: At least one worker has stopped refreshing its durable heartbeat.
+
+      - alert: LifeVerseDeadLetterJobs
+        expr: lifeverse_background_jobs_dead > 0
+        for: 1m
+        labels:
+          severity: warning
+        annotations:
+          summary: LifeVerse has dead-letter jobs
+          description: One or more background jobs are in the dead-letter state.

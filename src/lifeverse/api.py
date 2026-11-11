@@ -1,16 +1,21 @@
+import hmac
+import json
 import logging
+from contextlib import asynccontextmanager
 from datetime import datetime
 from time import perf_counter
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Request, Response
 from pydantic import BaseModel, Field
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from .config import get_settings
-from .db import get_session
+from .db import SessionLocal, get_session
+from .jobs import JobRecord, WorkerHeartbeatService
 from .logging import configure_logging
-from .observability import metrics, readiness
+from .observability import MetricsSnapshotReporter, MetricsSnapshotService, metrics, readiness
 from .api_16_25 import router as simulation_router
 from .services import (
     PlayerService,
@@ -29,7 +34,28 @@ from .services import (
 s = get_settings()
 configure_logging(s.log_level)
 logger = logging.getLogger("lifeverse.api")
-app = FastAPI(title=s.app_name, version="0.4.0")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    reporter = None
+    try:
+        if s.metrics_export_enabled:
+            reporter = MetricsSnapshotReporter(
+                SessionLocal,
+                f"api-{uuid4().hex}",
+                "api",
+                metrics.snapshot,
+                interval_seconds=s.metrics_publish_interval_seconds,
+            )
+            reporter.start()
+        yield
+    finally:
+        if reporter:
+            reporter.stop()
+
+
+app = FastAPI(title=s.app_name, version="0.4.0", lifespan=lifespan)
 
 
 @app.middleware("http")
@@ -154,6 +180,99 @@ def readiness_check(session: Session = Depends(get_session)):
 @app.get("/health")
 def health(session: Session = Depends(get_session)):
     return readiness(session)
+
+
+@app.get("/internal/metrics", include_in_schema=False)
+def internal_metrics(
+    authorization: str | None = Header(default=None),
+    session: Session = Depends(get_session),
+):
+    if not s.metrics_export_enabled or not s.metrics_token:
+        raise HTTPException(status_code=404, detail="not found")
+
+    supplied_token = (
+        authorization[7:]
+        if authorization and authorization.startswith("Bearer ")
+        else ""
+    )
+    if not hmac.compare_digest(supplied_token, s.metrics_token):
+        raise HTTPException(
+            status_code=401,
+            detail="invalid metrics credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    snapshots = MetricsSnapshotService().list_active(
+        session, stale_after_seconds=s.metrics_snapshot_ttl_seconds
+    )
+    headers = [
+        ("lifeverse_http_requests_total", "Total HTTP requests", "counter"),
+        ("lifeverse_http_requests_4xx_total", "HTTP 4xx responses", "counter"),
+        ("lifeverse_http_requests_5xx_total", "HTTP 5xx responses", "counter"),
+        (
+            "lifeverse_http_request_duration_ms_total",
+            "Cumulative HTTP request duration in milliseconds",
+            "counter",
+        ),
+        (
+            "lifeverse_http_request_duration_ms_max",
+            "Maximum HTTP request duration in milliseconds since process start",
+            "gauge",
+        ),
+        ("lifeverse_worker_jobs_completed_total", "Completed background jobs", "counter"),
+        ("lifeverse_worker_jobs_failed_total", "Failed background job attempts", "counter"),
+        ("lifeverse_worker_jobs_dead_total", "Jobs moved to dead-letter state", "counter"),
+        ("lifeverse_worker_heartbeats_stale", "Workers with stale heartbeats", "gauge"),
+        ("lifeverse_background_jobs_dead", "Current dead-letter job count", "gauge"),
+        ("lifeverse_metrics_active_instances", "Processes with fresh metric snapshots", "gauge"),
+    ]
+    lines = []
+    for name, help_text, metric_type in headers:
+        lines.extend([f"# HELP {name} {help_text}", f"# TYPE {name} {metric_type}"])
+
+    for record in snapshots:
+        values = json.loads(record.metrics_json)
+        labels = f'{{service="{record.service_name}",instance="{record.instance_id}"}}'
+        if record.service_name == "api":
+            lines.extend(
+                [
+                    f"lifeverse_http_requests_total{labels} {values.get('requests', 0)}",
+                    f"lifeverse_http_requests_4xx_total{labels} {values.get('requests_4xx', 0)}",
+                    f"lifeverse_http_requests_5xx_total{labels} {values.get('requests_5xx', 0)}",
+                    f"lifeverse_http_request_duration_ms_total{labels} "
+                    f"{values.get('request_duration_ms_total', 0)}",
+                    f"lifeverse_http_request_duration_ms_max{labels} "
+                    f"{values.get('request_duration_ms_max', 0)}",
+                ]
+            )
+        else:
+            lines.extend(
+                [
+                    f"lifeverse_worker_jobs_completed_total{labels} "
+                    f"{values.get('jobs_completed', 0)}",
+                    f"lifeverse_worker_jobs_failed_total{labels} "
+                    f"{values.get('jobs_failed', 0)}",
+                    f"lifeverse_worker_jobs_dead_total{labels} {values.get('jobs_dead', 0)}",
+                ]
+            )
+
+    stale_workers = WorkerHeartbeatService().list_stale(
+        session, stale_after_seconds=s.worker_heartbeat_stale_after_seconds
+    )
+    dead_jobs = session.scalar(
+        select(func.count()).select_from(JobRecord).where(JobRecord.status == "dead")
+    ) or 0
+    lines.extend(
+        [
+            f"lifeverse_worker_heartbeats_stale {len(stale_workers)}",
+            f"lifeverse_background_jobs_dead {dead_jobs}",
+            f"lifeverse_metrics_active_instances {len(snapshots)}",
+        ]
+    )
+    return Response(
+        content="\n".join(lines) + "\n",
+        media_type="text/plain; version=0.0.4; charset=utf-8",
+    )
 
 
 @app.post("/accounts", status_code=201)
