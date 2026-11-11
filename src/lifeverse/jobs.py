@@ -286,9 +286,7 @@ class WorkerHeartbeatReporter:
 
     def _write_heartbeat(self):
         with self.session_factory() as session:
-            self.service.heartbeat(
-                session, self.worker_id, current_job_id=self.current_job_id()
-            )
+            self.service.heartbeat(session, self.worker_id, current_job_id=self.current_job_id())
 
     def _run(self):
         while not self._stop_event.wait(self.interval_seconds):
