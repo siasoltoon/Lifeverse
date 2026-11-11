@@ -262,7 +262,7 @@ def test_compose_monitoring_services_are_opt_in_and_localhost_bound():
     )
     example_lines = (ROOT / ".env.example").read_text().splitlines()
     assert not any(line.startswith("LIFEVERSE_DATABASE_URL=") for line in example_lines)
-    assert Settings(_env_file=None).database_url == "sqlite:///./lifeverse.db"
+    assert Settings.model_fields["database_url"].default == "sqlite:///./lifeverse.db"
 
 
 def test_alembic_revision_ids_fit_version_column_limit():
