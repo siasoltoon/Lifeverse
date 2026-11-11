@@ -88,9 +88,7 @@ def main() -> None:
 
             wallets = list(
                 session.scalars(
-                    select(Wallet).where(
-                        Wallet.character_id.in_([owner.id, employee.id])
-                    )
+                    select(Wallet).where(Wallet.character_id.in_([owner.id, employee.id]))
                 )
             )
             for wallet in wallets:
@@ -127,9 +125,7 @@ def main() -> None:
         def run_payroll(business_id, idempotency_key):
             with SessionLocal() as session:
                 try:
-                    return BusinessService().payroll(
-                        session, business_id, idempotency_key
-                    )
+                    return BusinessService().payroll(session, business_id, idempotency_key)
                 except ValueError as exc:
                     session.rollback()
                     return ("error", str(exc))
@@ -197,14 +193,10 @@ def main() -> None:
                     )
                 )
                 session.execute(
-                    delete(BusinessEmployee).where(
-                        BusinessEmployee.business_id.in_(business_ids)
-                    )
+                    delete(BusinessEmployee).where(BusinessEmployee.business_id.in_(business_ids))
                 )
                 session.execute(delete(Business).where(Business.id.in_(business_ids)))
-            session.execute(
-                delete(Account).where(Account.username.in_(account_usernames))
-            )
+            session.execute(delete(Account).where(Account.username.in_(account_usernames)))
             if city_id is not None:
                 session.execute(delete(City).where(City.id == city_id))
             if created_country and country_id is not None:
