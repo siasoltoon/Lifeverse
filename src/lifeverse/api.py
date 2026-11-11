@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from time import perf_counter
 from uuid import UUID
@@ -27,6 +28,7 @@ from .services import (
 
 s = get_settings()
 configure_logging(s.log_level)
+logger = logging.getLogger("lifeverse.api")
 app = FastAPI(title=s.app_name, version="0.4.0")
 
 
@@ -39,7 +41,14 @@ async def collect_request_metrics(request: Request, call_next):
         status_code = response.status_code
         return response
     finally:
-        metrics.record_request(status_code, perf_counter() - started)
+        duration_seconds = perf_counter() - started
+        metrics.record_request(status_code, duration_seconds)
+        logger.info(
+            "http_request_completed method=%s status_code=%s duration_ms=%.2f",
+            request.method,
+            status_code,
+            duration_seconds * 1000,
+        )
 
 
 app.include_router(simulation_router)
@@ -130,6 +139,16 @@ def bad(fn):
         return fn()
     except ValueError as e:
         raise HTTPException(400, str(e)) from e
+
+
+@app.get("/health/live")
+def liveness():
+    return {"status": "alive"}
+
+
+@app.get("/health/ready")
+def readiness_check(session: Session = Depends(get_session)):
+    return readiness(session)
 
 
 @app.get("/health")
