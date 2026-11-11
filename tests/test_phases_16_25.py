@@ -1,6 +1,8 @@
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+from sqlalchemy import func, select
+
 from lifeverse.models import (
     Business,
     GameEvent,
