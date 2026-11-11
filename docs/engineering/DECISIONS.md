@@ -22,3 +22,5 @@ D-0020 Performance work uses bounded pagination and database indexes.
 D-0021 Background jobs are persistent database records with unique idempotency keys, atomic conditional claims, worker leases, retries with backoff and dead-letter state.
 D-0022 Readiness is database-backed; operational logs/metrics are separate from authoritative simulation state.
 D-0023 Deployment topology is portable: API, worker and migration processes can be independently deployed against the same configured database.
+D-0024 PostgreSQL production connectivity uses psycopg 3 through SQLAlchemy; SQLite remains the local development/test default. Standard PostgreSQL URLs are normalized centrally. Supabase Session Pooler is the IPv4-compatible option; Direct is preferred when the runtime has IPv6. Supabase Data API is not part of the backend SQLAlchemy access path.
+D-0025 Application runtime must use a restricted PostgreSQL role; project-owner credentials are reserved for controlled administration/migrations and must never be shipped to clients.
