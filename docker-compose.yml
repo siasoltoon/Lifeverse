@@ -3,7 +3,7 @@ services:
     build: .
     command: uvicorn lifeverse.api:app --host 0.0.0.0 --port 8000
     environment:
-      LIFEVERSE_DATABASE_URL: sqlite:////data/lifeverse.db
+      LIFEVERSE_DATABASE_URL: ${LIFEVERSE_DATABASE_URL:-sqlite:////data/lifeverse.db}
       LIFEVERSE_ENVIRONMENT: production
       LIFEVERSE_METRICS_PUBLISH_ENABLED: ${LIFEVERSE_METRICS_PUBLISH_ENABLED:-false}
       LIFEVERSE_METRICS_EXPORT_ENABLED: ${LIFEVERSE_METRICS_EXPORT_ENABLED:-false}
@@ -20,10 +20,10 @@ services:
     build: .
     command: python -m lifeverse.worker
     environment:
-      LIFEVERSE_DATABASE_URL: sqlite:////data/lifeverse.db
+      LIFEVERSE_DATABASE_URL: ${LIFEVERSE_DATABASE_URL:-sqlite:////data/lifeverse.db}
       LIFEVERSE_ENVIRONMENT: production
-      LIFEVERSE_METRICS_EXPORT_ENABLED: ${LIFEVERSE_METRICS_EXPORT_ENABLED:-false}
-      LIFEVERSE_METRICS_TOKEN: ${LIFEVERSE_METRICS_TOKEN:-}
+      LIFEVERSE_METRICS_PUBLISH_ENABLED: ${LIFEVERSE_METRICS_PUBLISH_ENABLED:-false}
+      LIFEVERSE_METRICS_EXPORT_ENABLED: "false"
     volumes:
       - lifeverse-data:/data
     depends_on:
@@ -34,7 +34,7 @@ services:
     build: .
     command: alembic upgrade head
     environment:
-      LIFEVERSE_DATABASE_URL: sqlite:////data/lifeverse.db
+      LIFEVERSE_DATABASE_URL: ${LIFEVERSE_MIGRATION_DATABASE_URL:-${LIFEVERSE_DATABASE_URL:-sqlite:////data/lifeverse.db}}
     volumes:
       - lifeverse-data:/data
 
