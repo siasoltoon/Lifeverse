@@ -18,3 +18,9 @@ def test_health_and_request_metrics():
     assert after["requests_4xx"] == before["requests_4xx"] + 1
     assert after["requests_5xx"] == before["requests_5xx"]
     assert after["request_duration_ms_total"] >= before["request_duration_ms_total"]
+
+
+def test_liveness_probe_does_not_require_database():
+    response = TestClient(app).get("/health/live")
+    assert response.status_code == 200
+    assert response.json() == {"status": "alive"}
