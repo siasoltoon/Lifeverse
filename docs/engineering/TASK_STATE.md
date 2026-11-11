@@ -28,10 +28,10 @@ OBS-01 observability baseline:
 
 Known limitations / pending:
 - Metrics are process-local, reset on restart and are not shared, persisted or exported. No external alert delivery is configured.
-- Durable worker heartbeat is not implemented.
+- Durable worker heartbeat persistence, periodic independent-session reporter, current-job tracking and clean shutdown handling have been implemented with tests and migration; CI verification is pending.
 - No controlled real worker handler integration test has been run against Supabase.
 - Production load/concurrency and failure/recovery behavior remain unverified.
 - Supabase service/database restart and disaster recovery remain untested.
 - Backup/PITR and CA/hostname certificate validation remain deferred.
 
-Exact next task: design secure centralized multi-process metrics export and alert delivery plus durable worker heartbeat. Then run controlled worker-handler integration and representative load/concurrency tests. Do not claim production-ready status.
+Exact next task: verify the durable worker heartbeat implementation through full CI. Then design secure centralized multi-process metrics export and alert delivery, followed by controlled worker-handler integration and representative load/concurrency tests. Do not claim production-ready status.
