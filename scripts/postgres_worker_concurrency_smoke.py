@@ -244,13 +244,23 @@ def main() -> None:
                         )
                         if not remaining_entries:
                             session.delete(system_account)
+            if character_ids:
+                character_values = [str(value) for value in character_ids]
+                session.execute(delete(AuditLog).where(AuditLog.actor_id.in_(character_values)))
+                session.execute(delete(AuditLog).where(AuditLog.entity_id.in_(character_values)))
             session.execute(delete(Account).where(Account.username.in_(account_usernames)))
             if city_id is not None:
                 session.execute(delete(City).where(City.id == city_id))
             if created_country and country_id is not None:
                 session.execute(delete(Country).where(Country.id == country_id))
             if created_currency and currency_id is not None:
-                session.execute(delete(Currency).where(Currency.id == currency_id))
+                remaining_accounts = session.scalar(
+                    select(func.count())
+                    .select_from(LedgerAccount)
+                    .where(LedgerAccount.currency_id == currency_id)
+                )
+                if not remaining_accounts:
+                    session.execute(delete(Currency).where(Currency.id == currency_id))
             session.commit()
         engine.dispose()
 
