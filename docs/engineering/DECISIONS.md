@@ -24,6 +24,8 @@ D-0022 Readiness is database-backed; operational logs/metrics are separate from 
 D-0023 Deployment topology is portable: API, worker and migration processes can be independently deployed against the same configured database.
 D-0024 PostgreSQL production connectivity uses psycopg 3 through SQLAlchemy; SQLite remains the local development/test default. Standard PostgreSQL URLs are normalized centrally. Supabase Session Pooler is the IPv4-compatible option; Direct is preferred when the runtime has IPv6. Supabase Data API is not part of the backend SQLAlchemy access path.
 D-0025 Application runtime must use a restricted PostgreSQL role; project-owner credentials are reserved for controlled administration/migrations and must never be shipped to clients.
-
 D-0026 Operational counters are thread-safe but process-local. They are not a global source of truth and are not exposed publicly; centralized export and alerting require an authenticated multi-process design.
 D-0027 Worker liveness is persisted in a dedicated worker_heartbeats table. Each worker reports periodically through an independent DB session, includes its current job when available, and marks clean shutdown; stale detection is query-based and does not itself imply alert delivery.
+D-0028 Cross-process operational telemetry uses per-process snapshots persisted in operational_metric_snapshots and scraped through one designated authenticated API exporter. Prometheus is the time-series store; snapshots are not authoritative game state.
+D-0029 Monitoring is opt-in. The worker publishes snapshots but never runs the metrics exporter and does not receive the metrics bearer token. Prometheus/Alertmanager management ports bind to localhost in the provided Compose profile.
+D-0030 Alertmanager uses a generic webhook receiver contract. Alert rules/configuration do not mean alerts are active; activation requires a real receiver URL and a successful delivery test.
