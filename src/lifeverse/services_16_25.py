@@ -270,9 +270,7 @@ class BusinessService:
                 raise ValueError("insufficient business funds")
 
             wallet = s.scalar(
-                select(Wallet)
-                .where(Wallet.character_id == employee.character_id)
-                .with_for_update()
+                select(Wallet).where(Wallet.character_id == employee.character_id).with_for_update()
             )
             if not wallet or wallet.currency_id != business.currency_id:
                 raise ValueError("employee wallet currency mismatch")
@@ -301,7 +299,6 @@ class BusinessService:
 
         s.commit()
         return total_paid
-
 
 
 class MarketService:
