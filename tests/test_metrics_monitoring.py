@@ -102,11 +102,34 @@ def test_metrics_snapshot_reporter_publishes_updates_and_stops(tmp_path):
 
 def test_metrics_export_settings_require_secure_configuration():
     defaults = Settings(_env_file=None, _env_prefix="TEST_")
+    assert defaults.metrics_publish_enabled is False
     assert defaults.metrics_export_enabled is False
     assert defaults.metrics_token is None
 
+    publisher = Settings(
+        _env_file=None,
+        _env_prefix="TEST_",
+        metrics_publish_enabled=True,
+    )
+    assert publisher.metrics_publish_enabled is True
+    assert publisher.metrics_export_enabled is False
+
+    exporter = Settings(
+        _env_file=None,
+        _env_prefix="TEST_",
+        metrics_publish_enabled=True,
+        metrics_export_enabled=True,
+        metrics_token="m" * 40,
+    )
+    assert exporter.metrics_export_enabled is True
+
     with pytest.raises(ValidationError):
-        Settings(_env_file=None, _env_prefix="TEST_", metrics_export_enabled=True)
+        Settings(
+            _env_file=None,
+            _env_prefix="TEST_",
+            metrics_export_enabled=True,
+            metrics_token="m" * 40,
+        )
     with pytest.raises(ValidationError):
         Settings(_env_file=None, _env_prefix="TEST_", metrics_token="too-short")
     with pytest.raises(ValidationError):
@@ -116,6 +139,32 @@ def test_metrics_export_settings_require_secure_configuration():
             metrics_publish_interval_seconds=30,
             metrics_snapshot_ttl_seconds=30,
         )
+
+
+def test_api_lifespan_publishes_metrics_without_being_the_exporter(monkeypatch):
+    started = []
+    stopped = []
+
+    class Reporter:
+        def __init__(self, *args, **kwargs):
+            started.append((args, kwargs))
+
+        def start(self):
+            started.append("started")
+
+        def stop(self):
+            stopped.append("stopped")
+
+    monkeypatch.setattr(api.s, "metrics_publish_enabled", True)
+    monkeypatch.setattr(api.s, "metrics_export_enabled", False)
+    monkeypatch.setattr(api, "MetricsSnapshotReporter", Reporter)
+
+    with TestClient(app):
+        pass
+
+    assert started
+    assert started[-1] == "started"
+    assert stopped == ["stopped"]
 
 
 def test_internal_metrics_endpoint_requires_bearer_token_and_exports_snapshots(
