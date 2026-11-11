@@ -36,9 +36,14 @@ def test_metric_snapshots_upsert_per_process_and_filter_stale_rows(session):
 
     assert updated.service_name == "api"
     assert json.loads(updated.metrics_json) == {"requests": 7}
-    assert len(
-        service.list_active(session, stale_after_seconds=60, now=now + timedelta(seconds=55))
-    ) == 2
+    assert (
+        len(
+            service.list_active(
+                session, stale_after_seconds=60, now=now + timedelta(seconds=55)
+            )
+        )
+        == 2
+    )
     assert [
         row.instance_id
         for row in service.list_active(
@@ -151,7 +156,7 @@ def test_internal_metrics_endpoint_requires_bearer_token_and_exports_snapshots(
     assert unauthorized.status_code == 401
     assert response.status_code == 200
     assert (
-        'lifeverse_http_requests_total{service="api",instance="api-test-instance"} 12'
+        'lifeverse_http_requests_total{service="api",process_instance="api-test-instance"} 12'
         in response.text
     )
     assert "lifeverse_worker_heartbeats_stale 0" in response.text

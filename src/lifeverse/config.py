@@ -9,6 +9,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     database_url: str = "sqlite:///./lifeverse.db"
     log_level: str = "INFO"
+    metrics_publish_enabled: bool = False
     metrics_export_enabled: bool = False
     metrics_token: str | None = None
     metrics_publish_interval_seconds: int = 15

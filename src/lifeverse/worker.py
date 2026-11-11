@@ -59,7 +59,7 @@ def main():
     try:
         reporter.start()
         settings = get_settings()
-        if settings.metrics_export_enabled:
+        if settings.metrics_publish_enabled:
             metrics_reporter = MetricsSnapshotReporter(
                 SessionLocal,
                 worker.worker_id,

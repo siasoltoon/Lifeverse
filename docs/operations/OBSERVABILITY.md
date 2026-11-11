@@ -22,9 +22,9 @@ Metric updates are thread-safe. Request logs include method, status code, and du
 
 ## Centralized metrics export
 
-Metrics remain inexpensive process-local counters during normal request/job execution. When `LIFEVERSE_METRICS_EXPORT_ENABLED=true`, each API and worker process publishes a snapshot every configured interval to `operational_metric_snapshots` using an independent database session. The API exposes fresh per-process snapshots as Prometheus text at `GET /internal/metrics`.
+Metrics remain inexpensive process-local counters during normal request/job execution. When `LIFEVERSE_METRICS_PUBLISH_ENABLED=true`, every API and worker process publishes a snapshot on the configured interval to `operational_metric_snapshots` using an independent database session. One designated API instance has `LIFEVERSE_METRICS_EXPORT_ENABLED=true` and exposes fresh snapshots from all processes as Prometheus text at `GET /internal/metrics`. Other API replicas must keep the exporter disabled while continuing to publish snapshots; this avoids Prometheus scraping the same database-wide series multiple times.
 
-The endpoint is disabled by default and requires an Authorization Bearer token of at least 32 characters. Configure the same `LIFEVERSE_METRICS_TOKEN` in the API and Prometheus secret file. Snapshots older than the configured TTL are excluded; old rows are pruned after seven days. Metrics are labelled only by fixed service name and generated process instance ID; request paths, user IDs, payloads and IP addresses are never labels.
+The exporter is disabled by default and requires an Authorization Bearer token of at least 32 characters. Configure the same `LIFEVERSE_METRICS_TOKEN` in the designated exporter API and Prometheus secret file. Snapshots older than the configured TTL are excluded; old rows are pruned after seven days. Metrics are labelled only by fixed service name and generated process instance ID; request paths, user IDs, payloads and IP addresses are never labels.
 
 The database is the cross-process snapshot transport, not a historical time-series store. Prometheus retains and queries the scraped series. If the database is unavailable, the exporter returns an error and Prometheus marks the target scrape as failed.
 
@@ -32,10 +32,12 @@ The database is the cross-process snapshot transport, not a historical time-seri
 
 An optional Docker Compose monitoring profile is provided:
 
-1. Create `secrets/metrics_token` with the exact same random token configured as `LIFEVERSE_METRICS_TOKEN` in the ignored `.env` file.
-2. Set `LIFEVERSE_METRICS_EXPORT_ENABLED=true`.
-3. Create `secrets/alert_webhook_url` containing an Alertmanager-compatible webhook receiver URL.
-4. Start the stack with `docker compose --profile monitoring up --build -d`.
+1. Generate a random token of at least 32 characters and set `LIFEVERSE_METRICS_TOKEN` to it in the ignored `.env` file.
+2. Set `LIFEVERSE_METRICS_PUBLISH_ENABLED=true` for every API and worker process.
+3. Set `LIFEVERSE_METRICS_EXPORT_ENABLED=true` only on the designated API exporter. In the single-API Docker Compose profile, set it to `true` for the API service.
+4. Create `secrets/metrics_token` containing the exact same token, without extra whitespace or a trailing newline.
+5. Create `secrets/alert_webhook_url` containing an Alertmanager-compatible webhook receiver URL, without extra whitespace or a trailing newline.
+6. Start the stack with `docker compose --profile monitoring up --build -d`.
 
 Prometheus and Alertmanager ports bind to localhost only. The metrics endpoint itself is bearer-token protected. The `secrets/` directory is ignored by Git and must not be committed.
 

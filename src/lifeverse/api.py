@@ -190,11 +190,7 @@ def internal_metrics(
     if not s.metrics_export_enabled or not s.metrics_token:
         raise HTTPException(status_code=404, detail="not found")
 
-    supplied_token = (
-        authorization[7:]
-        if authorization and authorization.startswith("Bearer ")
-        else ""
-    )
+    supplied_token = authorization[7:] if authorization and authorization.startswith("Bearer ") else ""
     if not hmac.compare_digest(supplied_token, s.metrics_token):
         raise HTTPException(
             status_code=401,
@@ -232,7 +228,7 @@ def internal_metrics(
 
     for record in snapshots:
         values = json.loads(record.metrics_json)
-        labels = f'{{service="{record.service_name}",instance="{record.instance_id}"}}'
+        labels = f'{{service="{record.service_name}",process_instance="{record.instance_id}"}}'
         if record.service_name == "api":
             lines.extend(
                 [
@@ -250,8 +246,7 @@ def internal_metrics(
                 [
                     f"lifeverse_worker_jobs_completed_total{labels} "
                     f"{values.get('jobs_completed', 0)}",
-                    f"lifeverse_worker_jobs_failed_total{labels} "
-                    f"{values.get('jobs_failed', 0)}",
+                    f"lifeverse_worker_jobs_failed_total{labels} {values.get('jobs_failed', 0)}",
                     f"lifeverse_worker_jobs_dead_total{labels} {values.get('jobs_dead', 0)}",
                 ]
             )
