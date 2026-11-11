@@ -195,9 +195,7 @@ class BusinessService:
         ):
             raise ValueError("idempotency prefix must contain 1-160 characters")
 
-        business = s.scalar(
-            select(Business).where(Business.id == business_id).with_for_update()
-        )
+        business = s.scalar(select(Business).where(Business.id == business_id).with_for_update())
         if not business:
             raise ValueError("business not found")
 
@@ -235,9 +233,7 @@ class BusinessService:
                     currency_id=business.currency_id,
                     amount=employee.wage,
                 )
-                .on_conflict_do_nothing(
-                    index_elements=[BusinessPayrollPayment.idempotency_key]
-                )
+                .on_conflict_do_nothing(index_elements=[BusinessPayrollPayment.idempotency_key])
                 .returning(BusinessPayrollPayment.id)
             )
             payment_id = s.scalar(statement)

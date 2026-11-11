@@ -394,12 +394,8 @@ class BusinessPayrollPayment(Base):
     employee_id: Mapped[UUID] = mapped_column(
         ForeignKey("business_employees.id", ondelete="RESTRICT"), index=True
     )
-    character_id: Mapped[UUID] = mapped_column(
-        ForeignKey("characters.id", ondelete="RESTRICT")
-    )
-    currency_id: Mapped[UUID] = mapped_column(
-        ForeignKey("currencies.id", ondelete="RESTRICT")
-    )
+    character_id: Mapped[UUID] = mapped_column(ForeignKey("characters.id", ondelete="RESTRICT"))
+    currency_id: Mapped[UUID] = mapped_column(ForeignKey("currencies.id", ondelete="RESTRICT"))
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 2))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
     __table_args__ = (
