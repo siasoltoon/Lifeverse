@@ -11,7 +11,7 @@ Post-phase operational acceptance (not a new roadmap phase):
 - OPS-DB-03 operational readiness validation: IN PROGRESS.
   - OBS-01 process-local metrics, API instrumentation, liveness/readiness and durable worker heartbeats: IMPLEMENTED and CI VERIFIED.
   - OBS-02 centralized per-process metrics snapshots, authenticated API exporter, optional Prometheus/Alertmanager Compose profile, five alert rules, and worker publisher wiring: IMPLEMENTED and CI VERIFIED.
-  - CI run 43120857558 on commit 131fd754c12a6cbf137ce029f5fe99b7bc1939fa: Ruff format/lint PASS; pytest 60 passed; SQLite and PostgreSQL 16 migrations PASS; PostgreSQL persistence smoke PASS; Prometheus config/rules PASS; Alertmanager config PASS; Docker build PASS. 46 existing deprecation warnings retained.
+  - CI run 43121145977 on commit 43b3b6bc41295efe79703b7b02ebf8754e96bb77: Ruff format/lint PASS; pytest 60 passed; SQLite and PostgreSQL 16 migrations PASS; PostgreSQL persistence smoke PASS; Prometheus config/rules PASS; Alertmanager config PASS; Docker build PASS. 46 existing deprecation warnings retained.
   - Remaining: apply migrations 0005–0006 to actual Supabase and verify runtime grants; configure/test a real Alertmanager webhook; controlled worker-handler integration; representative load/concurrency and failure/recovery validation; hosted database restart/recovery.
   - Backup/restore/PITR and CA/hostname certificate verification remain deferred by decision.
 Production operational readiness is NOT COMPLETE. Do not declare production-ready.
