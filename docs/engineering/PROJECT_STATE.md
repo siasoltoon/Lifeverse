@@ -2,7 +2,7 @@
 Repository: siasoltoon/Lifeverse
 Current phase: Phase 32 — Final Production Audit (completed and merged)
 Current task: OPS-DB-03 — operational readiness validation
-Task status: OBS-01 observability baseline implementation and CI verification PASS. OPS-DB-03 remains IN PROGRESS; centralized metrics export/alerts, controlled worker-handler integration, and representative load/concurrency validation remain. Durable worker heartbeat implementation is in place; CI verification is pending.
+Task status: OBS-01 observability baseline implementation and CI verification PASS. OPS-DB-03 remains IN PROGRESS; centralized metrics export/alerts, controlled worker-handler integration, and representative load/concurrency validation remain. Durable worker heartbeat implementation and CI verification PASS (run 43119236816, commit 22d2d8e889ef03f6a111edbe9da86731c4443df7; 46 tests passed, SQLite/PostgreSQL migrations, PostgreSQL smoke and Docker build PASS).
 PR: #7 — feat(db): add PostgreSQL and Supabase Session Pooler support
 Branch: feat/postgresql-supabase-support
 PR #7 remains draft and is not merged.
@@ -33,7 +33,7 @@ OBS-01 observability baseline (2026-11-12):
 - Verified GitHub Actions run 43118198244 on commit ee5235efd9fa0da9bc650bc22ade31127fdc5354: Ruff format PASS, Ruff lint PASS, pytest 43 passed, SQLite migration PASS, PostgreSQL 16 migration PASS, PostgreSQL persistence smoke PASS, Docker build PASS.
 - Warnings retained: Starlette/httpx TestClient deprecation and 45 datetime.utcnow() deprecations from existing model/test code; no warnings or tests were suppressed.
 
-Limits: metrics are process-local, reset on restart, not shared between API/worker processes, not persisted or exported; no central alert delivery is configured. Worker heartbeat code and tests have been added, but the new CI verification is pending. Safe handler integration and production load/concurrency remain unverified. Supabase service/database restart and disaster recovery were not tested.
+Limits: metrics are process-local, reset on restart, not shared between API/worker processes, not persisted or exported; no central alert delivery is configured. Worker heartbeat code, migration and tests are implemented and CI verified. Safe handler integration and production load/concurrency remain unverified. Supabase service/database restart and disaster recovery were not tested.
 Production readiness is NOT ESTABLISHED. Do not declare production-ready.
 
-Exact next action: finish CI verification of durable worker heartbeat; then design secure multi-process metrics export and alert delivery, followed by controlled worker-handler integration and representative load/concurrency tests. Keep backup/PITR and CA/hostname validation deferred unless the user reopens those decisions.
+Exact next action: design secure multi-process metrics export and alert delivery; then run controlled worker-handler integration and representative load/concurrency/failure-recovery tests. Keep backup/PITR and CA/hostname validation deferred unless the user reopens those decisions.
