@@ -38,3 +38,5 @@
 - Verified CI run 43121685847 on commit 38e53d1db0eb27e27b4b588ef5062c61c5cfbff0: Ruff format/lint PASS, pytest 60 passed, SQLite/PostgreSQL migrations PASS, PostgreSQL persistence smoke PASS, Prometheus config/rules PASS, Alertmanager config PASS, Docker Compose config PASS, Docker build PASS.
 - 46 existing warnings remain visible; none suppressed and no tests weakened.
 - Remaining OPS-DB-03: apply migrations 0005–0006 to actual Supabase and verify runtime grants, configure/test real webhook delivery, controlled worker-handler integration, representative load/concurrency/failure recovery and hosted DB restart/recovery. Backup/PITR and CA/hostname validation remain deferred.
+
+- Deployment hardening: .env.example leaves LIFEVERSE_DATABASE_URL unset by default, preserving the local Python SQLite default while allowing Docker Compose to select its persistent /data/lifeverse.db named-volume fallback. Regression assertions for the example and Compose DB paths are included in the 60-test CI run 43121685847 (Docker Compose config validation also PASS).
