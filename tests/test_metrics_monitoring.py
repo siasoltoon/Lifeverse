@@ -185,11 +185,25 @@ def test_prometheus_and_alertmanager_configs_are_valid_yaml_and_wired():
 
 def test_compose_monitoring_services_are_opt_in_and_localhost_bound():
     compose = yaml.safe_load((ROOT / "docker-compose.yml").read_text())
-    assert compose["services"]["prometheus"]["profiles"] == ["monitoring"]
-    assert compose["services"]["alertmanager"]["profiles"] == ["monitoring"]
-    assert "127.0.0.1:9090:9090" in compose["services"]["prometheus"]["ports"]
-    assert "127.0.0.1:9093:9093" in compose["services"]["alertmanager"]["ports"]
+    services = compose["services"]
+    assert services["prometheus"]["profiles"] == ["monitoring"]
+    assert services["alertmanager"]["profiles"] == ["monitoring"]
+    assert "127.0.0.1:9090:9090" in services["prometheus"]["ports"]
+    assert "127.0.0.1:9093:9093" in services["alertmanager"]["ports"]
 
+    api_environment = services["api"]["environment"]
+    worker_environment = services["worker"]["environment"]
+    assert api_environment["LIFEVERSE_METRICS_PUBLISH_ENABLED"] == (
+        "${LIFEVERSE_METRICS_PUBLISH_ENABLED:-false}"
+    )
+    assert api_environment["LIFEVERSE_METRICS_EXPORT_ENABLED"] == (
+        "${LIFEVERSE_METRICS_EXPORT_ENABLED:-false}"
+    )
+    assert worker_environment["LIFEVERSE_METRICS_PUBLISH_ENABLED"] == (
+        "${LIFEVERSE_METRICS_PUBLISH_ENABLED:-false}"
+    )
+    assert worker_environment["LIFEVERSE_METRICS_EXPORT_ENABLED"] == "false"
+    assert "LIFEVERSE_METRICS_TOKEN" not in worker_environment
 
 
 def test_alembic_revision_ids_fit_version_column_limit():
