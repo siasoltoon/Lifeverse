@@ -246,6 +246,7 @@ def test_travel_completion_worker_retry_is_idempotent(session):
     assert session.get(JobRecord, job.id).status == "completed"
     assert session.get(Character, character.id).city_id == destination.id
 
+
 def test_wallet_ledger_account_code_fits_two_full_uuid_references():
     code = f"wallet:{uuid4()}:{uuid4()}"
     assert len(code) <= LedgerAccount.__table__.c.code.type.length
