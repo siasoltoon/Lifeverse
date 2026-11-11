@@ -254,7 +254,6 @@ def test_compose_monitoring_services_are_opt_in_and_localhost_bound():
     assert worker_environment["LIFEVERSE_METRICS_EXPORT_ENABLED"] == "false"
     assert "LIFEVERSE_METRICS_TOKEN" not in worker_environment
 
-
 def test_alembic_revision_ids_fit_version_column_limit():
     versions = ROOT / "migrations/versions"
     revision_pattern = re.compile(r"^revision = [\"']([^\"']+)[\"']", re.MULTILINE)
