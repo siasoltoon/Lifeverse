@@ -128,8 +128,11 @@ def test_worker_failure_metrics(session):
     assert result is None
     assert after["jobs_failed"] == before["jobs_failed"] + 1
     assert after["jobs_dead"] == before["jobs_dead"] + 1
-    assert session.scalar(
-        JobRecord.__table__.select().with_only_columns(JobRecord.status).where(
-            JobRecord.idempotency_key == "worker-failure-metrics"
+    assert (
+        session.scalar(
+            JobRecord.__table__.select()
+            .with_only_columns(JobRecord.status)
+            .where(JobRecord.idempotency_key == "worker-failure-metrics")
         )
-    ) == "dead"
+        == "dead"
+    )
