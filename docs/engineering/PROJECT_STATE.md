@@ -39,7 +39,7 @@ OBS-02 centralized metrics and monitoring implementation:
 - Compose worker now publishes snapshots when enabled, explicitly keeps exporter disabled and does not receive the metrics bearer token.
 - Alert delivery uses a generic Alertmanager-compatible webhook. Rules/configuration exist, but alerts are NOT active until a real receiver is configured and a delivery test succeeds.
 - docs/operations/OBSERVABILITY.md documents setup and operational limits.
-- CI run 43121145977 on commit 43b3b6bc41295efe79703b7b02ebf8754e96bb77: Ruff format PASS; Ruff lint PASS; pytest 60 passed; SQLite migration PASS; PostgreSQL 16 migration PASS; PostgreSQL persistence smoke PASS; Prometheus config PASS; Prometheus rules PASS (5 rules); Alertmanager config PASS; Docker build PASS.
+- CI run 43121685847 on commit 38e53d1db0eb27e27b4b588ef5062c61c5cfbff0: Ruff format PASS; Ruff lint PASS; pytest 60 passed; SQLite migration PASS; PostgreSQL 16 migration PASS; PostgreSQL persistence smoke PASS; Prometheus config PASS; Prometheus rules PASS (5 rules); Alertmanager config PASS; Docker build PASS.
 - 46 existing warnings remain visible (one Starlette/httpx TestClient deprecation and 45 datetime.utcnow() deprecations); none were suppressed and no tests were weakened.
 - An earlier CI attempt exposed incorrect Docker entrypoint invocation for promtool/amtool; the workflow was corrected to use explicit --entrypoint and the complete rerun passed.
 
