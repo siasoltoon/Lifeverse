@@ -21,7 +21,7 @@ Actual Supabase acceptance (2026-11-12, last verified at revision 0004_phases_26
 - Worker --once exited with code 0. The background_jobs queue was empty before and after; no business/economy handler execution was attempted.
 - TLS encryption on the client connection was verified with psycopg's pgconn.ssl_in_use. CA/hostname certificate validation is deferred by decision.
 - Backup/restore/PITR verification is deferred by user decision.
-- Important boundary: revisions 0005_worker_heartbeats and 0006_metric_snapshots were added after this hosted acceptance. They have passed PostgreSQL 16 CI migrations, but have NOT yet been applied to the actual Supabase database.
+- Important boundary: revisions 0005_worker_heartbeats and 0006_metrics_snapshots were added after this hosted acceptance. They have passed PostgreSQL 16 CI migrations, but have NOT yet been applied to the actual Supabase database.
 
 OBS-01 observability baseline:
 - Thread-safe process-local Metrics counters with input validation.
@@ -31,7 +31,7 @@ OBS-01 observability baseline:
 - Durable worker heartbeat table/reporter, independent DB sessions, current-job visibility and clean shutdown implemented in migration 0005_worker_heartbeats.
 
 OBS-02 centralized metrics and monitoring implementation:
-- Migration 0006_metric_snapshots adds operational_metric_snapshots for per-process snapshots.
+- Migration 0006_metrics_snapshots adds operational_metric_snapshots for per-process snapshots.
 - API and worker processes can publish snapshots using independent database sessions; one designated API exporter exposes fresh API/worker metrics at authenticated GET /internal/metrics.
 - Export requires a Bearer token of at least 32 characters and is disabled by default.
 - Added optional Docker Compose monitoring profile for Prometheus and Alertmanager; both management ports bind to localhost.
@@ -39,7 +39,7 @@ OBS-02 centralized metrics and monitoring implementation:
 - Compose worker now publishes snapshots when enabled, explicitly keeps exporter disabled and does not receive the metrics bearer token.
 - Alert delivery uses a generic Alertmanager-compatible webhook. Rules/configuration exist, but alerts are NOT active until a real receiver is configured and a delivery test succeeds.
 - docs/operations/OBSERVABILITY.md documents setup and operational limits.
-- CI run 43120857558 on commit 131fd754c12a6cbf137ce029f5fe99b7bc1939fa: Ruff format PASS; Ruff lint PASS; pytest 60 passed; SQLite migration PASS; PostgreSQL 16 migration PASS; PostgreSQL persistence smoke PASS; Prometheus config PASS; Prometheus rules PASS (5 rules); Alertmanager config PASS; Docker build PASS.
+- CI run 43121145977 on commit 43b3b6bc41295efe79703b7b02ebf8754e96bb77: Ruff format PASS; Ruff lint PASS; pytest 60 passed; SQLite migration PASS; PostgreSQL 16 migration PASS; PostgreSQL persistence smoke PASS; Prometheus config PASS; Prometheus rules PASS (5 rules); Alertmanager config PASS; Docker build PASS.
 - 46 existing warnings remain visible (one Starlette/httpx TestClient deprecation and 45 datetime.utcnow() deprecations); none were suppressed and no tests were weakened.
 - An earlier CI attempt exposed incorrect Docker entrypoint invocation for promtool/amtool; the workflow was corrected to use explicit --entrypoint and the complete rerun passed.
 
