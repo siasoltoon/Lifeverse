@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from threading import Event
@@ -188,3 +189,13 @@ def test_compose_monitoring_services_are_opt_in_and_localhost_bound():
     assert compose["services"]["alertmanager"]["profiles"] == ["monitoring"]
     assert "127.0.0.1:9090:9090" in compose["services"]["prometheus"]["ports"]
     assert "127.0.0.1:9093:9093" in compose["services"]["alertmanager"]["ports"]
+
+
+
+def test_alembic_revision_ids_fit_version_column_limit():
+    versions = ROOT / "migrations/versions"
+    revision_pattern = re.compile(r"^revision = [\"']([^\"']+)[\"']", re.MULTILINE)
+    for migration_path in versions.glob("*.py"):
+        match = revision_pattern.search(migration_path.read_text())
+        if match:
+            assert len(match.group(1)) <= 32, migration_path.name
