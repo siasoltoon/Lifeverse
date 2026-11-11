@@ -234,9 +234,7 @@ def main() -> None:
                     )
                 if created_currency:
                     system_account = session.scalar(
-                        select(LedgerAccount).where(
-                            LedgerAccount.code == f"system:{currency_id}"
-                        )
+                        select(LedgerAccount).where(LedgerAccount.code == f"system:{currency_id}")
                     )
                     if system_account:
                         remaining_entries = session.scalar(
