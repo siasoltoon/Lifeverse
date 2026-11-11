@@ -40,6 +40,8 @@ OBS-02 centralized metrics and monitoring:
 - Prometheus alert rule validation with promtool: PASS — 5 rules.
 - Alertmanager config validation with amtool: PASS.
 - Docker build: PASS.
+- Docker Compose config validation: PASS.
+- .env.example leaves LIFEVERSE_DATABASE_URL unset; regression assertions confirm local SQLite field default and Compose persistent /data database fallback.
 - Warnings: 46 total (one Starlette/httpx TestClient deprecation and 45 datetime.utcnow() deprecations); retained, not suppressed.
 - First monitoring-validation attempt failed because the Prometheus/Alertmanager image entrypoints were invoked as arguments. Corrected with explicit --entrypoint promtool/amtool; complete rerun passed.
 
