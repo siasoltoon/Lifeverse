@@ -254,6 +254,16 @@ def test_compose_monitoring_services_are_opt_in_and_localhost_bound():
     assert worker_environment["LIFEVERSE_METRICS_EXPORT_ENABLED"] == "false"
     assert "LIFEVERSE_METRICS_TOKEN" not in worker_environment
 
+    assert api_environment["LIFEVERSE_DATABASE_URL"] == (
+        "${LIFEVERSE_DATABASE_URL:-sqlite:////data/lifeverse.db}"
+    )
+    assert services["migrate"]["environment"]["LIFEVERSE_DATABASE_URL"] == (
+        "${LIFEVERSE_MIGRATION_DATABASE_URL:-${LIFEVERSE_DATABASE_URL:-sqlite:////data/lifeverse.db}}"
+    )
+    example_lines = (ROOT / ".env.example").read_text().splitlines()
+    assert not any(line.startswith("LIFEVERSE_DATABASE_URL=") for line in example_lines)
+    assert Settings(_env_file=None).database_url == "sqlite:///./lifeverse.db"
+
 
 def test_alembic_revision_ids_fit_version_column_limit():
     versions = ROOT / "migrations/versions"
