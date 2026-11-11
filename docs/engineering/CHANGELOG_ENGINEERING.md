@@ -27,21 +27,14 @@
 - API /health PASS before and after clean API process restart.
 - Worker --once exited 0 with an empty queue before and after; no production handler was invoked.
 - Regression pytest: 28 passed. Recorded one Starlette/httpx and 45 datetime.utcnow deprecation warnings for follow-up; no tests weakened.
-- Remaining operational readiness work: verify backup/PITR restore, deployed TLS, alert delivery, controlled worker handler integration and load/concurrency.
+- TLS encryption verified; CA/hostname certificate validation deferred. Backup/PITR deferred by user decision.
 
 2026-11-12
-- OPS-DB-03 / OBS-01: added thread-safe process-local request/job metrics with input validation.
-- Added API request status/latency middleware and method/status/duration logs without request paths or payloads.
-- Added database-independent /health/live and database-backed /health/ready; retained /health readiness compatibility.
-- Added completed/failed/dead-letter worker outcome metrics.
-- Added metrics validation, thread-safety, API instrumentation and worker outcome regression tests.
-- Added docs/operations/OBSERVABILITY.md, explicitly documenting that metrics are process-local and no external alert delivery/exporter is configured.
-- CI run 43118198244 on ee5235efd9fa0da9bc650bc22ade31127fdc5354: Ruff format PASS, Ruff lint PASS, pytest 43 passed, SQLite migration PASS, PostgreSQL 16 migration PASS, PostgreSQL persistence smoke PASS, Docker build PASS.
-- First CI attempt caught a Ruff formatting issue in a test; corrected without weakening assertions; complete rerun passed.
-- Remaining OPS-DB-03 work: central multi-process metrics export, alert delivery, durable worker heartbeat, controlled worker handler integration and load/concurrency validation. Backup/PITR and CA/hostname validation remain deferred.
-
-2026-11-12
-- OPS-DB-03: added durable worker heartbeat persistence with migration 0005_worker_heartbeats.
-- Added PostgreSQL/SQLite atomic upsert, stale-worker query, independent-session periodic reporter, current-job visibility and graceful stopped status.
-- Added heartbeat lifecycle, stale detection and worker current-job regression tests.
-- Initial CI attempts caught two Ruff formatting differences; both were corrected without weakening tests. Final CI run 43119236816 on commit 22d2d8e889ef03f6a111edbe9da86731c4443df7 PASS: Ruff format/lint, pytest 46 passed (46 warnings), SQLite and PostgreSQL migrations, PostgreSQL persistence smoke and Docker build.
+- OBS-01: added thread-safe process-local request/job metrics, API request instrumentation, liveness/readiness probes and privacy-conscious request logs.
+- Added durable worker heartbeat persistence, independent-session periodic reporter, current-job visibility and graceful stopped status with migration 0005_worker_heartbeats.
+- OBS-02: added migration 0006_metric_snapshots, cross-process metric snapshot publishing, authenticated Prometheus text exporter, optional Prometheus/Alertmanager Compose profile and five operational alert rules.
+- Fixed Compose worker monitoring environment: worker publishes snapshots when enabled, keeps exporter disabled and receives no metrics token.
+- Added Compose wiring regression assertions and real promtool/amtool validation to CI. First validator attempt exposed incorrect Docker entrypoint invocation; fixed with explicit --entrypoint.
+- Verified CI run 43120857558 on commit 131fd754c12a6cbf137ce029f5fe99b7bc1939fa: Ruff format/lint PASS, pytest 60 passed, SQLite/PostgreSQL migrations PASS, PostgreSQL persistence smoke PASS, Prometheus config/rules PASS, Alertmanager config PASS, Docker build PASS.
+- 46 existing warnings remain visible; none suppressed and no tests weakened.
+- Remaining OPS-DB-03: apply migrations 0005–0006 to actual Supabase and verify runtime grants, configure/test real webhook delivery, controlled worker-handler integration, representative load/concurrency/failure recovery and hosted DB restart/recovery. Backup/PITR and CA/hostname validation remain deferred.
