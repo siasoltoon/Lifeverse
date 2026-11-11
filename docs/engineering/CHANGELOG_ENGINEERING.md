@@ -32,9 +32,9 @@
 2026-11-12
 - OBS-01: added thread-safe process-local request/job metrics, API request instrumentation, liveness/readiness probes and privacy-conscious request logs.
 - Added durable worker heartbeat persistence, independent-session periodic reporter, current-job visibility and graceful stopped status with migration 0005_worker_heartbeats.
-- OBS-02: added migration 0006_metric_snapshots, cross-process metric snapshot publishing, authenticated Prometheus text exporter, optional Prometheus/Alertmanager Compose profile and five operational alert rules.
+- OBS-02: added migration 0006_metrics_snapshots, cross-process metric snapshot publishing, authenticated Prometheus text exporter, optional Prometheus/Alertmanager Compose profile and five operational alert rules.
 - Fixed Compose worker monitoring environment: worker publishes snapshots when enabled, keeps exporter disabled and receives no metrics token.
 - Added Compose wiring regression assertions and real promtool/amtool validation to CI. First validator attempt exposed incorrect Docker entrypoint invocation; fixed with explicit --entrypoint.
-- Verified CI run 43120857558 on commit 131fd754c12a6cbf137ce029f5fe99b7bc1939fa: Ruff format/lint PASS, pytest 60 passed, SQLite/PostgreSQL migrations PASS, PostgreSQL persistence smoke PASS, Prometheus config/rules PASS, Alertmanager config PASS, Docker build PASS.
+- Verified CI run 43121145977 on commit 43b3b6bc41295efe79703b7b02ebf8754e96bb77: Ruff format/lint PASS, pytest 60 passed, SQLite/PostgreSQL migrations PASS, PostgreSQL persistence smoke PASS, Prometheus config/rules PASS, Alertmanager config PASS, Docker build PASS.
 - 46 existing warnings remain visible; none suppressed and no tests weakened.
 - Remaining OPS-DB-03: apply migrations 0005–0006 to actual Supabase and verify runtime grants, configure/test real webhook delivery, controlled worker-handler integration, representative load/concurrency/failure recovery and hosted DB restart/recovery. Backup/PITR and CA/hostname validation remain deferred.
