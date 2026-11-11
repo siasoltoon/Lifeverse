@@ -48,4 +48,4 @@ Durable worker heartbeat (OPS-DB-03 follow-up):
 - Added migration 0005_worker_heartbeats for persistent worker identity, status, started/last-seen/stopped timestamps and optional current job.
 - Added atomic SQLite/PostgreSQL upsert, stale-worker query, periodic reporter using an independent database session, current-job tracking and clean shutdown status.
 - Added tests for upsert/stale detection, current-job visibility and reporter shutdown.
-- Initial CI attempt 43118898302 failed at Ruff format check only (one formatting difference in jobs.py); formatting was corrected in commit 92561ca75cdc1c331c847e02cc0fc16dc215a5f6. Full CI after correction is pending.
+- Initial CI attempts 43118898302 and 43119128692 caught two Ruff formatting differences (jobs.py and one test assertion); both were corrected without weakening tests. Final CI run 43119236816 on commit 22d2d8e889ef03f6a111edbe9da86731c4443df7 PASS: Ruff format, Ruff lint, pytest 46 passed (46 existing warnings), SQLite migration, PostgreSQL 16 migration, PostgreSQL schema/persistence smoke and Docker build.
