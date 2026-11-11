@@ -49,6 +49,10 @@ jobs:
         env:
           LIFEVERSE_DATABASE_URL: postgresql://lifeverse:lifeverse_ci@localhost:5432/lifeverse
         run: python scripts/postgres_smoke.py
+      - name: PostgreSQL payroll concurrency smoke test
+        env:
+          LIFEVERSE_DATABASE_URL: postgresql://lifeverse:lifeverse_ci@localhost:5432/lifeverse
+        run: python scripts/postgres_worker_concurrency_smoke.py
       - name: Validate Prometheus and Alertmanager configuration
         shell: bash
         run: |
