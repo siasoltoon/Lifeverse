@@ -44,4 +44,4 @@
 - OPS-DB-03: added durable worker heartbeat persistence with migration 0005_worker_heartbeats.
 - Added PostgreSQL/SQLite atomic upsert, stale-worker query, independent-session periodic reporter, current-job visibility and graceful stopped status.
 - Added heartbeat lifecycle, stale detection and worker current-job regression tests.
-- Initial CI run failed only Ruff formatting; corrected in commit 92561ca75cdc1c331c847e02cc0fc16dc215a5f6. Final CI verification pending.
+- Initial CI attempts caught two Ruff formatting differences; both were corrected without weakening tests. Final CI run 43119236816 on commit 22d2d8e889ef03f6a111edbe9da86731c4443df7 PASS: Ruff format/lint, pytest 46 passed (46 warnings), SQLite and PostgreSQL migrations, PostgreSQL persistence smoke and Docker build.
