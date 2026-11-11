@@ -41,4 +41,11 @@ OBS-01 observability baseline CI:
 - Warnings: 46 total (one Starlette/httpx TestClient deprecation and 45 datetime.utcnow() deprecations); retained, not suppressed.
 - First CI attempt failed only Ruff formatting in a new test assertion; the formatting was corrected and the subsequent complete workflow passed.
 
-Not tested / still pending: centralized metrics export, external alert delivery, durable worker heartbeat, controlled real worker-handler execution against Supabase, production load/concurrency and failure/recovery, Supabase service/database restart, backup restore/PITR. Backup/PITR and CA/hostname validation are deferred by decision.
+Not tested / still pending: centralized metrics export, external alert delivery, controlled real worker-handler execution against Supabase, production load/concurrency and failure/recovery, Supabase service/database restart, backup restore/PITR. Backup/PITR and CA/hostname validation are deferred by decision.
+
+
+Durable worker heartbeat (OPS-DB-03 follow-up):
+- Added migration 0005_worker_heartbeats for persistent worker identity, status, started/last-seen/stopped timestamps and optional current job.
+- Added atomic SQLite/PostgreSQL upsert, stale-worker query, periodic reporter using an independent database session, current-job tracking and clean shutdown status.
+- Added tests for upsert/stale detection, current-job visibility and reporter shutdown.
+- Initial CI attempt 43118898302 failed at Ruff format check only (one formatting difference in jobs.py); formatting was corrected in commit 92561ca75cdc1c331c847e02cc0fc16dc215a5f6. Full CI after correction is pending.
