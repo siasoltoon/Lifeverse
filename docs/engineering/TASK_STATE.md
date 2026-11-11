@@ -29,7 +29,7 @@ OBS-02 centralized metrics/monitoring:
 - Worker Compose service publishes metrics when enabled, explicitly disables exporter and receives no metrics token.
 - Generic Alertmanager webhook configuration is present; real receiver configuration and delivery remain unverified.
 - Tests cover snapshot validation/upsert/staleness, reporter lifecycle, exporter auth, monitoring YAML, alert definitions, and Compose publisher/exporter isolation.
-- CI run 43121145977 on commit 43b3b6bc41295efe79703b7b02ebf8754e96bb77 PASS: Ruff format/lint, pytest 60 passed, SQLite migration, PostgreSQL 16 migration, PostgreSQL persistence smoke, Prometheus config/rules, Alertmanager config, Docker build. 46 existing warnings retained.
+- CI run 43121685847 on commit 38e53d1db0eb27e27b4b588ef5062c61c5cfbff0 PASS: Ruff format/lint, pytest 60 passed, SQLite migration, PostgreSQL 16 migration, PostgreSQL persistence smoke, Prometheus config/rules, Alertmanager config, Docker build. 46 existing warnings retained.
 
 Known limitations / pending:
 - Apply migrations 0005–0006 to actual Supabase with migration identity; audit runtime-role DML permissions for both new tables.
