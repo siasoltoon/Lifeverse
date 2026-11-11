@@ -19,6 +19,12 @@ Use a dedicated, least-privilege runtime database role rather than the Supabase 
 
 Run `alembic upgrade head` before starting API and worker processes. API and worker must use the same database. Do not point production at the local SQLite default.
 
+For Docker Compose, `LIFEVERSE_DATABASE_URL` is used by API and worker. Set `LIFEVERSE_MIGRATION_DATABASE_URL` separately when migrations require a privileged database identity; the migration service falls back to the runtime URL only when no migration URL is supplied. Keep the migration identity out of API/worker environments.
+
+## Monitoring
+
+See [Observability and Health Checks](operations/OBSERVABILITY.md) for liveness/readiness, metrics publishing, the authenticated Prometheus exporter, optional monitoring Compose profile and alert delivery requirements. Enable metrics publishing on each API/worker process, but enable the exporter only on one designated API instance. Real alerts are not active until a webhook receiver is configured and delivery is tested.
+
 ## Local
 
 1. Create a virtual environment and install `pip install -e ".[dev]"`.
