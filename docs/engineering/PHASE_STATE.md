@@ -6,10 +6,12 @@ Verified earlier candidate workflow: 35589115359.
 PR #6 merged as d8f308e062a175f3a9d56da70fbb1e1fd843a2f9.
 
 Post-phase operational acceptance (not a new roadmap phase):
-- OPS-DB-01 PostgreSQL/Supabase compatibility foundation: implementation complete; PR #7 CI PASS (28 tests, SQLite and PostgreSQL 16 migrations, PostgreSQL committed persistence smoke, Docker build).
-- OPS-DB-02 actual Supabase acceptance: ACCEPTANCE CHECKS PASS on 2026-11-12. Actual Session Pooler migration, 44-table/revision verification, restricted runtime-role privilege checks, cross-process persistence and cleanup, DDL denial, API health and restart, worker --once no-op polling, and 28-test regression passed. TLS encryption was verified; CA/hostname validation and backup/PITR were deferred by user decision.
+- OPS-DB-01 PostgreSQL/Supabase compatibility foundation: implementation complete; PR #7 CI migration/persistence checks PASS.
+- OPS-DB-02 actual Supabase acceptance: ACCEPTANCE CHECKS PASS on 2026-11-12 at revision 0004_phases_26_32. Session Pooler migration, 44-table/revision verification, restricted runtime-role privilege checks, cross-process persistence and cleanup, DDL denial, API health/restart, worker --once no-op polling, and regression passed. TLS encryption was verified; CA/hostname validation and backup/PITR were deferred by user decision.
 - OPS-DB-03 operational readiness validation: IN PROGRESS.
-  - OBS-01 process-local observability baseline: IMPLEMENTED and CI VERIFIED. Run 43118198244, commit ee5235efd9fa0da9bc650bc22ade31127fdc5354: Ruff format/lint PASS; pytest 43 passed; SQLite migration PASS; PostgreSQL migration and persistence smoke PASS; Docker build PASS.
-  - Remaining: centralized multi-process metrics exporter, real alert delivery, controlled worker-handler integration, representative load/concurrency and failure/recovery validation. Durable worker heartbeat implementation and regression tests are CI VERIFIED (run 43119236816, commit 22d2d8e889ef03f6a111edbe9da86731c4443df7; 46 tests passed, both migrations and Docker build passed).
-  - Backup/restore/PITR remains deferred; certificate CA/hostname verification remains deferred.
-Production operational readiness is NOT COMPLETE. Do not declare production-ready prematurely.
+  - OBS-01 process-local metrics, API instrumentation, liveness/readiness and durable worker heartbeats: IMPLEMENTED and CI VERIFIED.
+  - OBS-02 centralized per-process metrics snapshots, authenticated API exporter, optional Prometheus/Alertmanager Compose profile, five alert rules, and worker publisher wiring: IMPLEMENTED and CI VERIFIED.
+  - CI run 43120857558 on commit 131fd754c12a6cbf137ce029f5fe99b7bc1939fa: Ruff format/lint PASS; pytest 60 passed; SQLite and PostgreSQL 16 migrations PASS; PostgreSQL persistence smoke PASS; Prometheus config/rules PASS; Alertmanager config PASS; Docker build PASS. 46 existing deprecation warnings retained.
+  - Remaining: apply migrations 0005–0006 to actual Supabase and verify runtime grants; configure/test a real Alertmanager webhook; controlled worker-handler integration; representative load/concurrency and failure/recovery validation; hosted database restart/recovery.
+  - Backup/restore/PITR and CA/hostname certificate verification remain deferred by decision.
+Production operational readiness is NOT COMPLETE. Do not declare production-ready.
