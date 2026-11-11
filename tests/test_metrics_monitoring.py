@@ -37,11 +37,7 @@ def test_metric_snapshots_upsert_per_process_and_filter_stale_rows(session):
     assert updated.service_name == "api"
     assert json.loads(updated.metrics_json) == {"requests": 7}
     assert (
-        len(
-            service.list_active(
-                session, stale_after_seconds=60, now=now + timedelta(seconds=55)
-            )
-        )
+        len(service.list_active(session, stale_after_seconds=60, now=now + timedelta(seconds=55)))
         == 2
     )
     assert [
@@ -147,9 +143,7 @@ def test_internal_metrics_endpoint_requires_bearer_token_and_exports_snapshots(
     try:
         client = TestClient(app)
         unauthorized = client.get("/internal/metrics")
-        response = client.get(
-            "/internal/metrics", headers={"Authorization": f"Bearer {token}"}
-        )
+        response = client.get("/internal/metrics", headers={"Authorization": f"Bearer {token}"})
     finally:
         app.dependency_overrides.pop(get_session, None)
 

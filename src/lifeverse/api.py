@@ -190,7 +190,9 @@ def internal_metrics(
     if not s.metrics_export_enabled or not s.metrics_token:
         raise HTTPException(status_code=404, detail="not found")
 
-    supplied_token = authorization[7:] if authorization and authorization.startswith("Bearer ") else ""
+    supplied_token = (
+        authorization[7:] if authorization and authorization.startswith("Bearer ") else ""
+    )
     if not hmac.compare_digest(supplied_token, s.metrics_token):
         raise HTTPException(
             status_code=401,
@@ -254,9 +256,12 @@ def internal_metrics(
     stale_workers = WorkerHeartbeatService().list_stale(
         session, stale_after_seconds=s.worker_heartbeat_stale_after_seconds
     )
-    dead_jobs = session.scalar(
-        select(func.count()).select_from(JobRecord).where(JobRecord.status == "dead")
-    ) or 0
+    dead_jobs = (
+        session.scalar(
+            select(func.count()).select_from(JobRecord).where(JobRecord.status == "dead")
+        )
+        or 0
+    )
     lines.extend(
         [
             f"lifeverse_worker_heartbeats_stale {len(stale_workers)}",

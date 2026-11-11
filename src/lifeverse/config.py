@@ -45,6 +45,8 @@ class Settings(BaseSettings):
             raise ValueError("metrics snapshot TTL must be at least twice the publish interval")
         if self.worker_heartbeat_stale_after_seconds < 1:
             raise ValueError("worker heartbeat stale threshold must be positive")
+        if self.metrics_export_enabled and not self.metrics_publish_enabled:
+            raise ValueError("metrics publishing must be enabled on the exporter process")
         if self.metrics_export_enabled and not self.metrics_token:
             raise ValueError("metrics token is required when metrics export is enabled")
         return self
