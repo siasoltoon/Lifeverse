@@ -21,9 +21,7 @@ def upgrade():
 
 def downgrade():
     bind = op.get_bind()
-    oversized = bind.scalar(
-        sa.text("SELECT COUNT(*) FROM ledger_accounts WHERE length(code) > 64")
-    )
+    oversized = bind.scalar(sa.text("SELECT COUNT(*) FROM ledger_accounts WHERE length(code) > 64"))
     if oversized:
         raise RuntimeError(
             "Cannot downgrade ledger account codes while values exceed 64 characters"
