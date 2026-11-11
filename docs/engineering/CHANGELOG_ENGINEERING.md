@@ -39,3 +39,9 @@
 - CI run 43118198244 on ee5235efd9fa0da9bc650bc22ade31127fdc5354: Ruff format PASS, Ruff lint PASS, pytest 43 passed, SQLite migration PASS, PostgreSQL 16 migration PASS, PostgreSQL persistence smoke PASS, Docker build PASS.
 - First CI attempt caught a Ruff formatting issue in a test; corrected without weakening assertions; complete rerun passed.
 - Remaining OPS-DB-03 work: central multi-process metrics export, alert delivery, durable worker heartbeat, controlled worker handler integration and load/concurrency validation. Backup/PITR and CA/hostname validation remain deferred.
+
+2026-11-12
+- OPS-DB-03: added durable worker heartbeat persistence with migration 0005_worker_heartbeats.
+- Added PostgreSQL/SQLite atomic upsert, stale-worker query, independent-session periodic reporter, current-job visibility and graceful stopped status.
+- Added heartbeat lifecycle, stale detection and worker current-job regression tests.
+- Initial CI run failed only Ruff formatting; corrected in commit 92561ca75cdc1c331c847e02cc0fc16dc215a5f6. Final CI verification pending.
