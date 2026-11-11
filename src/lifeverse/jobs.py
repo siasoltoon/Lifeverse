@@ -10,6 +10,7 @@ from sqlalchemy import DateTime, Index, Integer, String, Text, select, update
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
+from .observability import metrics
 
 logger = logging.getLogger(__name__)
 
@@ -162,9 +163,13 @@ class Worker:
                 raise ValueError(f"no handler registered for {job.job_type}")
             result = handler(session, payload)
             self.service.complete(session, job.id, self.worker_id)
+            metrics.inc("jobs_completed")
             logger.info("background_job_completed job_id=%s type=%s", job.id, job.job_type)
             return result
         except Exception as exc:
-            self.service.fail(session, job.id, self.worker_id, exc)
+            failed = self.service.fail(session, job.id, self.worker_id, exc)
+            metrics.inc("jobs_failed")
+            if failed.status == "dead":
+                metrics.inc("jobs_dead")
             logger.exception("background_job_failed job_id=%s type=%s", job.id, job.job_type)
             return None
