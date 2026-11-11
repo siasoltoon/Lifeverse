@@ -16,6 +16,9 @@ from lifeverse.models import (
     City,
     Country,
     Currency,
+    LedgerAccount,
+    LedgerEntry,
+    LedgerTransaction,
     Wallet,
 )
 from lifeverse.services import EconomyService, PlayerService
@@ -36,6 +39,7 @@ def main() -> None:
     currency_id = None
     created_country = False
     created_currency = False
+    character_ids = []
 
     try:
         with SessionLocal() as session:
@@ -85,6 +89,7 @@ def main() -> None:
             employee = player.create_character(
                 session, employee_account.id, "Payroll Employee", country.id, city.id
             )
+            character_ids.extend([owner.id, employee.id])
 
             wallets = list(
                 session.scalars(
@@ -196,6 +201,51 @@ def main() -> None:
                     delete(BusinessEmployee).where(BusinessEmployee.business_id.in_(business_ids))
                 )
                 session.execute(delete(Business).where(Business.id.in_(business_ids)))
+            if currency_id is not None and character_ids:
+                wallet_codes = [
+                    f"wallet:{character_id}:{currency_id}" for character_id in character_ids
+                ]
+                ledger_account_ids = list(
+                    session.scalars(
+                        select(LedgerAccount.id).where(LedgerAccount.code.in_(wallet_codes))
+                    )
+                )
+                if ledger_account_ids:
+                    transaction_ids = list(
+                        session.scalars(
+                            select(LedgerEntry.transaction_id)
+                            .where(LedgerEntry.ledger_account_id.in_(ledger_account_ids))
+                            .distinct()
+                        )
+                    )
+                    if transaction_ids:
+                        session.execute(
+                            delete(LedgerEntry).where(
+                                LedgerEntry.transaction_id.in_(transaction_ids)
+                            )
+                        )
+                        session.execute(
+                            delete(LedgerTransaction).where(
+                                LedgerTransaction.id.in_(transaction_ids)
+                            )
+                        )
+                    session.execute(
+                        delete(LedgerAccount).where(LedgerAccount.id.in_(ledger_account_ids))
+                    )
+                if created_currency:
+                    system_account = session.scalar(
+                        select(LedgerAccount).where(
+                            LedgerAccount.code == f"system:{currency_id}"
+                        )
+                    )
+                    if system_account:
+                        remaining_entries = session.scalar(
+                            select(func.count())
+                            .select_from(LedgerEntry)
+                            .where(LedgerEntry.ledger_account_id == system_account.id)
+                        )
+                        if not remaining_entries:
+                            session.delete(system_account)
             session.execute(delete(Account).where(Account.username.in_(account_usernames)))
             if city_id is not None:
                 session.execute(delete(City).where(City.id == city_id))
