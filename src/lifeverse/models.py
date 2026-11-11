@@ -384,6 +384,29 @@ class BusinessEmployee(Base):
     __table_args__ = (UniqueConstraint("business_id", "character_id", name="uq_business_employee"),)
 
 
+class BusinessPayrollPayment(Base):
+    __tablename__ = "business_payroll_payments"
+    id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
+    idempotency_key: Mapped[str] = mapped_column(String(255), nullable=False)
+    business_id: Mapped[UUID] = mapped_column(
+        ForeignKey("businesses.id", ondelete="RESTRICT"), index=True
+    )
+    employee_id: Mapped[UUID] = mapped_column(
+        ForeignKey("business_employees.id", ondelete="RESTRICT"), index=True
+    )
+    character_id: Mapped[UUID] = mapped_column(
+        ForeignKey("characters.id", ondelete="RESTRICT")
+    )
+    currency_id: Mapped[UUID] = mapped_column(
+        ForeignKey("currencies.id", ondelete="RESTRICT")
+    )
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    __table_args__ = (
+        UniqueConstraint("idempotency_key", name="uq_business_payroll_idempotency_key"),
+    )
+
+
 class MarketOrder(Base):
     __tablename__ = "market_orders"
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)

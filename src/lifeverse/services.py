@@ -399,10 +399,18 @@ class TravelService:
         return t
 
     def complete(self, s, travel_id):
-        t = s.get(Travel, travel_id)
+        t = s.scalar(select(Travel).where(Travel.id == travel_id).with_for_update())
         if not t:
             raise ValueError("travel not found")
+        if t.status == "completed":
+            return t
+        if t.status != "scheduled":
+            raise ValueError("travel is not in a completable state")
         c = s.get(Character, t.character_id)
+        if not c:
+            raise ValueError("travel character not found")
+        if c.city_id != t.from_city_id:
+            raise ValueError("character is no longer at the travel origin")
         c.city_id = t.to_city_id
         t.status = "completed"
         s.commit()

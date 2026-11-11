@@ -18,11 +18,10 @@ def event_dispatch(session, payload):
 
 
 def business_payroll(session, payload):
-    return str(
-        BusinessService()
-        .payroll(session, UUID(payload["business_id"]), payload["idempotency_key"])
-        .id
+    total_paid = BusinessService().payroll(
+        session, UUID(payload["business_id"]), payload["idempotency_key"]
     )
+    return str(total_paid)
 
 
 def travel_complete(session, payload):

@@ -74,8 +74,17 @@ def test_business_payroll_and_market_settlement(session):
         session, seller.id, city.id, "Shop", "retail", currency.id, Decimal("100"), EconomyService()
     )
     BusinessService().hire(session, business.id, buyer.id, Decimal("25"))
-    BusinessService().payroll(session, business.id, "payroll-1")
+    first_payroll = BusinessService().payroll(session, business.id, "payroll-1")
+    second_payroll = BusinessService().payroll(session, business.id, "payroll-1")
+    assert first_payroll == Decimal("25.00")
+    assert second_payroll == Decimal("0")
     assert session.get(Business, business.id).balance == Decimal("75.00")
+
+    from lifeverse.models import BusinessPayrollPayment, Wallet
+
+    employee_wallet = session.scalar(select(Wallet).where(Wallet.character_id == buyer.id))
+    assert employee_wallet.balance == Decimal("25.00")
+    assert session.scalar(select(func.count()).select_from(BusinessPayrollPayment)) == 1
 
     item = Item(
         code="apple", name="Apple", kind="food", weight=Decimal("0.2"), base_price=Decimal("5")
