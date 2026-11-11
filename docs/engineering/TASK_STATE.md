@@ -23,13 +23,13 @@ OBS-01 observability baseline:
 - Durable worker heartbeat persistence, independent-session reporter, current-job visibility and graceful stopped status in migration 0005_worker_heartbeats.
 
 OBS-02 centralized metrics/monitoring:
-- Migration 0006_metric_snapshots persists process-level API/worker snapshots.
+- Migration 0006_metrics_snapshots persists process-level API/worker snapshots.
 - Independent-session publishers and authenticated GET /internal/metrics exporter; exporter disabled by default and requires a 32+ character Bearer token.
 - Optional Prometheus/Alertmanager Compose profile; localhost-only ports; five alert rules.
 - Worker Compose service publishes metrics when enabled, explicitly disables exporter and receives no metrics token.
 - Generic Alertmanager webhook configuration is present; real receiver configuration and delivery remain unverified.
 - Tests cover snapshot validation/upsert/staleness, reporter lifecycle, exporter auth, monitoring YAML, alert definitions, and Compose publisher/exporter isolation.
-- CI run 43120857558 on commit 131fd754c12a6cbf137ce029f5fe99b7bc1939fa PASS: Ruff format/lint, pytest 60 passed, SQLite migration, PostgreSQL 16 migration, PostgreSQL persistence smoke, Prometheus config/rules, Alertmanager config, Docker build. 46 existing warnings retained.
+- CI run 43121145977 on commit 43b3b6bc41295efe79703b7b02ebf8754e96bb77 PASS: Ruff format/lint, pytest 60 passed, SQLite migration, PostgreSQL 16 migration, PostgreSQL persistence smoke, Prometheus config/rules, Alertmanager config, Docker build. 46 existing warnings retained.
 
 Known limitations / pending:
 - Apply migrations 0005–0006 to actual Supabase with migration identity; audit runtime-role DML permissions for both new tables.
