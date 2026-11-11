@@ -74,5 +74,7 @@ jobs:
             -v "/tmp/lifeverse-ci-secrets:/run/secrets:ro" \
             prom/alertmanager:v0.28.1 \
             check-config /etc/alertmanager/alertmanager.yml
+      - name: Validate Docker Compose configuration
+        run: docker compose --profile monitoring config --quiet
       - name: Container build
         run: docker build -t lifeverse-ci .
