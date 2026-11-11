@@ -16,6 +16,7 @@ The application records these in-process metrics:
 - `requests_4xx` and `requests_5xx`: client and server error responses.
 - `request_duration_ms_total` and `request_duration_ms_max`: aggregate and maximum request duration.
 - `jobs_completed`, `jobs_failed`, and `jobs_dead`: worker outcomes.
+- `worker_heartbeats`: durable per-worker status, last-seen time, and optional current job. Each worker writes an initial heartbeat, refreshes it periodically using an independent database session, and marks a clean shutdown as stopped.
 
 Metric updates are thread-safe. Request logs include method, status code, and duration. They intentionally omit URL paths, query strings, request bodies, and client addresses to avoid high-cardinality labels and unnecessary personal-data collection.
 
@@ -26,6 +27,8 @@ These metrics are process-local and reset when a process restarts. They are not 
 Do not expose a metrics endpoint publicly until an authenticated exporter/collector design is implemented. A future exporter must account for separate API and worker processes and multiple replicas rather than presenting one process's counters as global totals.
 
 ## Alerting status
+
+Worker heartbeats are durable and can be queried for stale running workers. A stale heartbeat is evidence that a worker has stopped reporting; it is not by itself proof that a particular job failed. The heartbeat reporter uses its own database session so long-running handlers do not block liveness updates.
 
 No external alert delivery is configured by this change. Candidate alert conditions for a future centralized monitoring integration:
 
