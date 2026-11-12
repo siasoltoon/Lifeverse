@@ -3,6 +3,7 @@ from sqlalchemy import engine_from_config, pool
 
 from lifeverse import models  # noqa: F401
 from lifeverse import jobs  # noqa: F401
+from lifeverse import observability  # noqa: F401
 from lifeverse.config import get_settings
 from lifeverse.db import Base
 

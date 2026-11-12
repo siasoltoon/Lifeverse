@@ -29,9 +29,11 @@ def test_job_idempotency_claim_retry_and_completion(session):
     )
     assert same.id == first.id
     worker = Worker(service=service, worker_id="worker-a")
+    completed_before = metrics.snapshot()["jobs_completed"]
     result = worker.run_once(session, {"test.echo": lambda s, p: p["value"]})
     assert result == 7
     assert session.get(JobRecord, first.id).status == "completed"
+    assert metrics.snapshot()["jobs_completed"] == completed_before + 1
 
 
 def test_job_recovery_and_dead_letter(session):
@@ -103,3 +105,34 @@ def test_job_failure_retries_until_dead(session):
     dead = service.fail(session, claimed.id, "worker-a", "permanent", retry_delay_seconds=0)
     assert dead.status == "dead"
     assert dead.attempts == 2
+
+
+def test_worker_failure_metrics(session):
+    service = JobService()
+    service.enqueue(
+        session,
+        "test.worker-failure",
+        run_at=datetime.now(UTC),
+        idempotency_key="worker-failure-metrics",
+        max_attempts=1,
+    )
+    worker = Worker(service=service, worker_id="worker-metrics")
+    before = metrics.snapshot()
+
+    def fail_handler(current_session, payload):
+        raise RuntimeError("expected test failure")
+
+    result = worker.run_once(session, {"test.worker-failure": fail_handler})
+    after = metrics.snapshot()
+
+    assert result is None
+    assert after["jobs_failed"] == before["jobs_failed"] + 1
+    assert after["jobs_dead"] == before["jobs_dead"] + 1
+    assert (
+        session.scalar(
+            JobRecord.__table__.select()
+            .with_only_columns(JobRecord.status)
+            .where(JobRecord.idempotency_key == "worker-failure-metrics")
+        )
+        == "dead"
+    )

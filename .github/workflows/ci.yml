@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: ["main", "ci/**", "feature/**"]
+    branches: ["main", "ci/**", "feature/**", "feat/**"]
   pull_request:
 
 permissions:
@@ -11,6 +11,20 @@ permissions:
 jobs:
   quality:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: lifeverse
+          POSTGRES_USER: lifeverse
+          POSTGRES_PASSWORD: lifeverse_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U lifeverse -d lifeverse"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,7 +39,46 @@ jobs:
         run: ruff check .
       - name: Tests
         run: pytest --cov=lifeverse --cov-report=term-missing
-      - name: Migration smoke test
+      - name: SQLite migration smoke test
         run: alembic upgrade head
+      - name: PostgreSQL migration smoke test
+        env:
+          LIFEVERSE_DATABASE_URL: postgresql://lifeverse:lifeverse_ci@localhost:5432/lifeverse
+        run: alembic upgrade head
+      - name: PostgreSQL schema and persistence smoke test
+        env:
+          LIFEVERSE_DATABASE_URL: postgresql://lifeverse:lifeverse_ci@localhost:5432/lifeverse
+        run: python scripts/postgres_smoke.py
+      - name: PostgreSQL payroll and job-claim concurrency smoke test
+        env:
+          LIFEVERSE_DATABASE_URL: postgresql://lifeverse:lifeverse_ci@localhost:5432/lifeverse
+        run: python scripts/postgres_worker_concurrency_smoke.py
+      - name: Validate Prometheus and Alertmanager configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/lifeverse-ci-secrets
+          printf '%s' 'lifeverse-ci-metrics-token-not-a-real-secret' > /tmp/lifeverse-ci-secrets/metrics_token
+          printf '%s' 'http://127.0.0.1:9999/alertmanager-test' > /tmp/lifeverse-ci-secrets/alert_webhook_url
+          docker run --rm \
+            --entrypoint promtool \
+            -v "$PWD/monitoring:/etc/prometheus:ro" \
+            -v "/tmp/lifeverse-ci-secrets:/run/secrets:ro" \
+            prom/prometheus:v3.5.0 \
+            check config /etc/prometheus/prometheus.yml
+          docker run --rm \
+            --entrypoint promtool \
+            -v "$PWD/monitoring:/etc/prometheus:ro" \
+            -v "/tmp/lifeverse-ci-secrets:/run/secrets:ro" \
+            prom/prometheus:v3.5.0 \
+            check rules /etc/prometheus/alert_rules.yml
+          docker run --rm \
+            --entrypoint amtool \
+            -v "$PWD/monitoring:/etc/alertmanager:ro" \
+            -v "/tmp/lifeverse-ci-secrets:/run/secrets:ro" \
+            prom/alertmanager:v0.28.1 \
+            check-config /etc/alertmanager/alertmanager.yml
+      - name: Validate Docker Compose configuration
+        run: docker compose --profile monitoring config --quiet
       - name: Container build
         run: docker build -t lifeverse-ci .

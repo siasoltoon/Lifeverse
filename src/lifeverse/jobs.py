@@ -4,12 +4,16 @@ import json
 import logging
 import secrets
 from datetime import UTC, datetime, timedelta
+from threading import Event, Lock, Thread
 from uuid import UUID, uuid4
 
-from sqlalchemy import DateTime, Index, Integer, String, Text, select, update
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text, select, update
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .db import Base
+from .observability import metrics
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +41,79 @@ class JobRecord(Base):
         Index("ix_background_jobs_claim", "status", "run_at"),
         Index("ix_background_jobs_lock", "status", "locked_at"),
     )
+
+
+class WorkerHeartbeat(Base):
+    __tablename__ = "worker_heartbeats"
+
+    worker_id: Mapped[str] = mapped_column(String(128), primary_key=True)
+    status: Mapped[str] = mapped_column(String(24), default="running")
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    stopped_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    current_job_id: Mapped[UUID | None] = mapped_column(
+        ForeignKey("background_jobs.id", ondelete="SET NULL")
+    )
+
+
+class WorkerHeartbeatService:
+    def heartbeat(self, session, worker_id: str, current_job_id: UUID | None = None, now=None):
+        if not isinstance(worker_id, str) or not worker_id or len(worker_id) > 128:
+            raise ValueError("worker_id must contain 1-128 characters")
+
+        now = now or datetime.now(UTC)
+        values = {
+            "worker_id": worker_id,
+            "status": "running",
+            "started_at": now,
+            "last_seen_at": now,
+            "stopped_at": None,
+            "current_job_id": current_job_id,
+        }
+        dialect = session.get_bind().dialect.name
+        if dialect == "postgresql":
+            statement = postgresql_insert(WorkerHeartbeat).values(**values)
+        elif dialect == "sqlite":
+            statement = sqlite_insert(WorkerHeartbeat).values(**values)
+        else:
+            raise RuntimeError(f"unsupported heartbeat database dialect: {dialect}")
+
+        statement = statement.on_conflict_do_update(
+            index_elements=[WorkerHeartbeat.worker_id],
+            set_={
+                "status": "running",
+                "last_seen_at": now,
+                "stopped_at": None,
+                "current_job_id": current_job_id,
+            },
+        )
+        session.execute(statement)
+        session.commit()
+        session.expire_all()
+        return session.get(WorkerHeartbeat, worker_id)
+
+    def stop(self, session, worker_id: str, now=None):
+        now = now or datetime.now(UTC)
+        row = self.heartbeat(session, worker_id, now=now)
+        row.status = "stopped"
+        row.stopped_at = now
+        row.current_job_id = None
+        session.commit()
+        return row
+
+    def list_stale(self, session, stale_after_seconds: int = 60, now=None):
+        if stale_after_seconds < 1:
+            raise ValueError("stale_after_seconds must be positive")
+        now = now or datetime.now(UTC)
+        cutoff = now - timedelta(seconds=stale_after_seconds)
+        return list(
+            session.scalars(
+                select(WorkerHeartbeat).where(
+                    WorkerHeartbeat.status == "running",
+                    WorkerHeartbeat.last_seen_at < cutoff,
+                )
+            )
+        )
 
 
 class JobService:
@@ -150,11 +227,23 @@ class Worker:
     def __init__(self, service=None, worker_id=None):
         self.service = service or JobService()
         self.worker_id = worker_id or f"worker-{secrets.token_hex(8)}"
+        self._current_job_id: UUID | None = None
+        self._current_job_lock = Lock()
+
+    @property
+    def current_job_id(self) -> UUID | None:
+        with self._current_job_lock:
+            return self._current_job_id
+
+    def _set_current_job(self, job_id: UUID | None) -> None:
+        with self._current_job_lock:
+            self._current_job_id = job_id
 
     def run_once(self, session, handlers):
         job = self.service.claim(session, self.worker_id)
         if not job:
             return None
+        self._set_current_job(job.id)
         try:
             payload = json.loads(job.payload)
             handler = handlers.get(job.job_type)
@@ -162,9 +251,73 @@ class Worker:
                 raise ValueError(f"no handler registered for {job.job_type}")
             result = handler(session, payload)
             self.service.complete(session, job.id, self.worker_id)
+            metrics.inc("jobs_completed")
             logger.info("background_job_completed job_id=%s type=%s", job.id, job.job_type)
             return result
         except Exception as exc:
-            self.service.fail(session, job.id, self.worker_id, exc)
+            failed = self.service.fail(session, job.id, self.worker_id, exc)
+            metrics.inc("jobs_failed")
+            if failed.status == "dead":
+                metrics.inc("jobs_dead")
             logger.exception("background_job_failed job_id=%s type=%s", job.id, job.job_type)
             return None
+        finally:
+            self._set_current_job(None)
+
+
+class WorkerHeartbeatReporter:
+    def __init__(
+        self,
+        session_factory,
+        worker_id: str,
+        current_job_id,
+        interval_seconds: float = 15.0,
+        service: WorkerHeartbeatService | None = None,
+    ):
+        if interval_seconds <= 0:
+            raise ValueError("heartbeat interval must be positive")
+        self.session_factory = session_factory
+        self.worker_id = worker_id
+        self.current_job_id = current_job_id
+        self.interval_seconds = interval_seconds
+        self.service = service or WorkerHeartbeatService()
+        self._stop_event = Event()
+        self._thread: Thread | None = None
+
+    def _write_heartbeat(self):
+        with self.session_factory() as session:
+            self.service.heartbeat(session, self.worker_id, current_job_id=self.current_job_id())
+
+    def _run(self):
+        while not self._stop_event.wait(self.interval_seconds):
+            try:
+                self._write_heartbeat()
+            except Exception:
+                logger.exception("worker_heartbeat_failed worker_id=%s", self.worker_id)
+
+    def start(self):
+        if self._thread and self._thread.is_alive():
+            raise RuntimeError("worker heartbeat reporter is already running")
+        self._stop_event.clear()
+        self._write_heartbeat()
+        self._thread = Thread(
+            target=self._run,
+            name=f"heartbeat-{self.worker_id}",
+            daemon=True,
+        )
+        self._thread.start()
+
+    def stop(self):
+        if not self._thread:
+            return
+        self._stop_event.set()
+        self._thread.join(timeout=max(self.interval_seconds + 5, 10))
+        if self._thread.is_alive():
+            logger.error("worker_heartbeat_shutdown_timeout worker_id=%s", self.worker_id)
+            return
+        try:
+            with self.session_factory() as session:
+                self.service.stop(session, self.worker_id)
+        except Exception:
+            logger.exception("worker_heartbeat_stop_failed worker_id=%s", self.worker_id)
+        self._thread = None

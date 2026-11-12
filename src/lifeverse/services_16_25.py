@@ -10,6 +10,8 @@ from decimal import Decimal
 from random import Random
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as postgresql_insert
+from sqlalchemy.dialects.sqlite import insert as sqlite_insert
 
 from .models import (
     AIIntent,
@@ -18,6 +20,7 @@ from .models import (
     AuditLog,
     Business,
     BusinessEmployee,
+    BusinessPayrollPayment,
     Character,
     CombatSession,
     EventDefinition,
@@ -95,6 +98,7 @@ class EventService:
                 .where(GameEvent.state.in_({"scheduled", "pending"}), GameEvent.scheduled_at <= now)
                 .order_by(GameEvent.scheduled_at, GameEvent.id)
                 .limit(limit)
+                .with_for_update(skip_locked=True)
             )
         )
         for row in rows:
@@ -184,32 +188,96 @@ class BusinessService:
         return row
 
     def payroll(self, s, business_id, idempotency_prefix):
-        business = s.get(Business, business_id)
+        if (
+            not isinstance(idempotency_prefix, str)
+            or not idempotency_prefix.strip()
+            or len(idempotency_prefix) > 160
+        ):
+            raise ValueError("idempotency prefix must contain 1-160 characters")
+
+        business = s.scalar(select(Business).where(Business.id == business_id).with_for_update())
         if not business:
             raise ValueError("business not found")
+
         employees = list(
             s.scalars(
-                select(BusinessEmployee).where(
-                    BusinessEmployee.business_id == business_id, BusinessEmployee.status == "active"
+                select(BusinessEmployee)
+                .where(
+                    BusinessEmployee.business_id == business_id,
+                    BusinessEmployee.status == "active",
                 )
+                .order_by(BusinessEmployee.id)
+                .with_for_update()
             )
         )
-        total = sum((e.wage for e in employees), Decimal("0"))
-        if business.balance < total:
-            raise ValueError("insufficient business funds")
-        business.balance -= total
+        dialect = s.get_bind().dialect.name
+        if dialect == "postgresql":
+            insert_payment = postgresql_insert
+        elif dialect == "sqlite":
+            insert_payment = sqlite_insert
+        else:
+            raise RuntimeError(f"unsupported payroll database dialect: {dialect}")
+
+        total_paid = Decimal("0")
         for employee in employees:
-            wallet = s.scalar(select(Wallet).where(Wallet.character_id == employee.character_id))
+            legacy_key = f"{idempotency_prefix}:{employee.id}"
+            payment_key = f"{business.id}:{idempotency_prefix}:{employee.id}"
+
+            statement = (
+                insert_payment(BusinessPayrollPayment)
+                .values(
+                    idempotency_key=payment_key,
+                    business_id=business.id,
+                    employee_id=employee.id,
+                    character_id=employee.character_id,
+                    currency_id=business.currency_id,
+                    amount=employee.wage,
+                )
+                .on_conflict_do_nothing(index_elements=[BusinessPayrollPayment.idempotency_key])
+                .returning(BusinessPayrollPayment.id)
+            )
+            payment_id = s.scalar(statement)
+            if payment_id is None:
+                continue
+
+            legacy_logs = s.scalars(
+                select(AuditLog).where(
+                    AuditLog.actor_type == "business",
+                    AuditLog.actor_id == str(business.id),
+                    AuditLog.action == "business.payroll",
+                    AuditLog.entity_type == "character",
+                    AuditLog.entity_id == str(employee.character_id),
+                )
+            )
+            legacy_amount = None
+            for log in legacy_logs:
+                try:
+                    details = json.loads(log.details or "{}")
+                except (TypeError, json.JSONDecodeError):
+                    continue
+                if details.get("idempotency_key") == legacy_key:
+                    legacy_amount = Decimal(str(details["amount"]))
+                    break
+
+            payment = s.get(BusinessPayrollPayment, payment_id)
+            if legacy_amount is not None:
+                payment.amount = legacy_amount
+                continue
+
+            if employee.wage < 0:
+                raise ValueError("employee wage cannot be negative")
+            if business.balance < employee.wage:
+                raise ValueError("insufficient business funds")
+
+            wallet = s.scalar(
+                select(Wallet).where(Wallet.character_id == employee.character_id).with_for_update()
+            )
             if not wallet or wallet.currency_id != business.currency_id:
                 raise ValueError("employee wallet currency mismatch")
+
+            business.balance -= employee.wage
             wallet.balance += employee.wage
-            key = f"{idempotency_prefix}:{employee.id}"
-            if s.scalar(
-                select(AuditLog).where(
-                    AuditLog.action == "business.payroll", AuditLog.details.like(f"%{key}%")
-                )
-            ):
-                continue
+            total_paid += employee.wage
             s.add(
                 AuditLog(
                     actor_type="business",
@@ -217,11 +285,20 @@ class BusinessService:
                     action="business.payroll",
                     entity_type="character",
                     entity_id=str(employee.character_id),
-                    details=json.dumps({"amount": str(employee.wage), "idempotency_key": key}),
+                    details=json.dumps(
+                        {
+                            "amount": str(employee.wage),
+                            "idempotency_key": legacy_key,
+                            "payment_key": payment_key,
+                            "payment_id": str(payment_id),
+                        },
+                        sort_keys=True,
+                    ),
                 )
             )
+
         s.commit()
-        return total
+        return total_paid
 
 
 class MarketService:

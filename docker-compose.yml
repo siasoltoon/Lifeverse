@@ -3,8 +3,11 @@ services:
     build: .
     command: uvicorn lifeverse.api:app --host 0.0.0.0 --port 8000
     environment:
-      LIFEVERSE_DATABASE_URL: sqlite:////data/lifeverse.db
+      LIFEVERSE_DATABASE_URL: ${LIFEVERSE_DATABASE_URL:-sqlite:////data/lifeverse.db}
       LIFEVERSE_ENVIRONMENT: production
+      LIFEVERSE_METRICS_PUBLISH_ENABLED: ${LIFEVERSE_METRICS_PUBLISH_ENABLED:-false}
+      LIFEVERSE_METRICS_EXPORT_ENABLED: ${LIFEVERSE_METRICS_EXPORT_ENABLED:-false}
+      LIFEVERSE_METRICS_TOKEN: ${LIFEVERSE_METRICS_TOKEN:-}
     volumes:
       - lifeverse-data:/data
     ports:
@@ -17,8 +20,10 @@ services:
     build: .
     command: python -m lifeverse.worker
     environment:
-      LIFEVERSE_DATABASE_URL: sqlite:////data/lifeverse.db
+      LIFEVERSE_DATABASE_URL: ${LIFEVERSE_DATABASE_URL:-sqlite:////data/lifeverse.db}
       LIFEVERSE_ENVIRONMENT: production
+      LIFEVERSE_METRICS_PUBLISH_ENABLED: ${LIFEVERSE_METRICS_PUBLISH_ENABLED:-false}
+      LIFEVERSE_METRICS_EXPORT_ENABLED: "false"
     volumes:
       - lifeverse-data:/data
     depends_on:
@@ -29,9 +34,42 @@ services:
     build: .
     command: alembic upgrade head
     environment:
-      LIFEVERSE_DATABASE_URL: sqlite:////data/lifeverse.db
+      LIFEVERSE_DATABASE_URL: ${LIFEVERSE_MIGRATION_DATABASE_URL:-${LIFEVERSE_DATABASE_URL:-sqlite:////data/lifeverse.db}}
     volumes:
       - lifeverse-data:/data
 
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    profiles: ["monitoring"]
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.enable-lifecycle
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - ./secrets/metrics_token:/run/secrets/metrics_token:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      - api
+      - alertmanager
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    profiles: ["monitoring"]
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ./secrets/alert_webhook_url:/run/secrets/alert_webhook_url:ro
+      - alertmanager-data:/alertmanager
+    ports:
+      - "127.0.0.1:9093:9093"
+
 volumes:
   lifeverse-data:
+  prometheus-data:
+  alertmanager-data:
