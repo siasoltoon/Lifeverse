@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import UUID, uuid4
 
@@ -14,7 +14,7 @@ class Account(Base):
     __tablename__ = "accounts"
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     username: Mapped[str] = mapped_column(String(64), unique=True, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     identities: Mapped[list[AccountIdentity]] = relationship(
         back_populates="account", cascade="all, delete-orphan"
     )
@@ -120,7 +120,7 @@ class WorldState(Base):
     __tablename__ = "world_state"
     key: Mapped[str] = mapped_column(String(64), primary_key=True)
     value: Mapped[str] = mapped_column(Text, default="")
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 class Job(Base):
@@ -299,7 +299,7 @@ class LedgerTransaction(Base):
     id: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)
     idempotency_key: Mapped[str] = mapped_column(String(128), unique=True)
     reference: Mapped[str] = mapped_column(String(128))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 class LedgerEntry(Base):
@@ -359,7 +359,7 @@ class AuditLog(Base):
     action: Mapped[str] = mapped_column(String(128))
     entity_type: Mapped[str] = mapped_column(String(64))
     entity_id: Mapped[str] = mapped_column(String(128))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     details: Mapped[str] = mapped_column(Text, default="{}")
 
 
@@ -397,7 +397,7 @@ class BusinessPayrollPayment(Base):
     character_id: Mapped[UUID] = mapped_column(ForeignKey("characters.id", ondelete="RESTRICT"))
     currency_id: Mapped[UUID] = mapped_column(ForeignKey("currencies.id", ondelete="RESTRICT"))
     amount: Mapped[Decimal] = mapped_column(Numeric(18, 2))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
     __table_args__ = (
         UniqueConstraint("idempotency_key", name="uq_business_payroll_idempotency_key"),
     )
@@ -414,7 +414,7 @@ class MarketOrder(Base):
     total_price: Mapped[Decimal] = mapped_column(Numeric(18, 2))
     idempotency_key: Mapped[str] = mapped_column(String(128), unique=True)
     status: Mapped[str] = mapped_column(String(32), default="completed")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 class LawCase(Base):
@@ -425,7 +425,7 @@ class LawCase(Base):
     severity: Mapped[int] = mapped_column(Integer, default=1)
     state: Mapped[str] = mapped_column(String(32), default="open")
     evidence: Mapped[str] = mapped_column(Text, default="{}")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 class CombatSession(Base):
@@ -436,7 +436,7 @@ class CombatSession(Base):
     state: Mapped[str] = mapped_column(String(32), default="active")
     turn: Mapped[int] = mapped_column(Integer, default=1)
     seed: Mapped[int] = mapped_column(Integer)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 class AIIntent(Base):
@@ -447,7 +447,7 @@ class AIIntent(Base):
     payload: Mapped[str] = mapped_column(Text, default="{}")
     state: Mapped[str] = mapped_column(String(32), default="proposed")
     rejection_reason: Mapped[str | None] = mapped_column(String(255))
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 class Translation(Base):
@@ -469,7 +469,7 @@ class ExploitSignal(Base):
     severity: Mapped[int] = mapped_column(Integer)
     evidence: Mapped[str] = mapped_column(Text, default="{}")
     state: Mapped[str] = mapped_column(String(32), default="open")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=datetime.utcnow)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(UTC))
 
 
 class RateLimitBucket(Base):
