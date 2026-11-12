@@ -29,12 +29,13 @@ OBS-01 / durable worker heartbeat:
 - Existing warnings retained; no tests weakened.
 
 OBS-02 centralized metrics and monitoring:
-- CI run 43124375294 on commit 153a3282376df988377babb5c070e028c14e599c.
+- CI run 43125062636 on commit e8abece630c19df10db3d12302e89934a698d5aa.
 - Ruff format/lint: PASS.
-- pytest: PASS — 65 passed in 2.80s, one Starlette/httpx TestClient deprecation warning.
+- pytest: PASS — 65 passed in 4.36s, one Starlette/httpx TestClient deprecation warning.
 - SQLite and PostgreSQL 16 Alembic migrations: PASS.
 - PostgreSQL schema and persistence smoke: PASS.
 - PostgreSQL payroll concurrency smoke: PASS.
+- PostgreSQL job-claim concurrency smoke: PASS — four concurrent workers claimed and completed 24 queued jobs exactly once.
 - Prometheus config and five alert rules validated with promtool: PASS.
 - Alertmanager config validated with amtool: PASS.
 - Docker Compose config and Docker build: PASS.
@@ -44,7 +45,7 @@ OBS-02 centralized metrics and monitoring:
 OBS-03 worker-handler and payroll concurrency:
 - CI verified migrations 0007_business_payroll and 0008_expand_ledger_account_code.
 - Worker integration tests cover payroll, event dispatch and travel completion when handler state commits but job completion fails, then the job retries.
-- PostgreSQL concurrency smoke proves distinct payroll jobs cannot overdraw a business and duplicate idempotency keys cannot credit a wallet twice.
+- PostgreSQL concurrency smoke proves distinct payroll jobs cannot overdraw a business, duplicate idempotency keys cannot credit a wallet twice, and four concurrent workers claim/complete 24 jobs without duplicate or lost claims.
 - Payroll ledger uses unique BusinessPayrollPayment idempotency keys, row locks, dialect-native ON CONFLICT DO NOTHING and atomic business/wallet/ledger/audit updates. Legacy AuditLog keys are lazily backfilled.
 - business.payroll handler now returns the Decimal amount correctly; event dispatch uses FOR UPDATE SKIP LOCKED; travel completion is state-checked and idempotent.
 - LedgerAccount.code widened to 128 to fit wallet:{character_uuid}:{currency_uuid}.

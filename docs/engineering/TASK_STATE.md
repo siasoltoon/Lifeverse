@@ -36,7 +36,7 @@ OBS-03 worker-handler and economic retry safety:
 - Business payroll locks business, employee and wallet rows; new payment, business debit, wallet credit and audit record share one transaction. Legacy AuditLog idempotency keys are lazily imported to protect pre-migration retries.
 - business.payroll handler now returns a string amount correctly; event dispatch uses row locks with SKIP LOCKED; travel completion validates state/origin and is idempotent.
 - Migration 0008_expand_ledger_account_code widens ledger_accounts.code to 128 for wallet identifiers containing full character and currency UUIDs.
-- CI run 43124375294 on commit 153a3282376df988377babb5c070e028c14e599c PASS: 65 tests, 1 Starlette/httpx warning; Ruff format/lint; SQLite/PostgreSQL migrations; PostgreSQL persistence and payroll concurrency smoke; Prometheus/Alertmanager/Compose config validation; Docker build.
+- CI run 43124375294 on commit 153a3282376df988377babb5c070e028c14e599c PASS: 65 tests, 1 Starlette/httpx warning; Ruff format/lint; SQLite/PostgreSQL migrations; PostgreSQL persistence, payroll concurrency and 4-worker/24-job claim concurrency smoke; Prometheus/Alertmanager/Compose config validation; Docker build.
 
 Known limitations / pending:
 - Apply migrations 0005–0008 to actual Supabase with migration identity; audit runtime-role DML permissions for worker_heartbeats, operational_metric_snapshots and business_payroll_payments.

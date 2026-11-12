@@ -49,12 +49,12 @@ OBS-03 worker-handler retry safety and economic idempotency:
 - business.payroll worker handler now returns the payroll amount rather than incorrectly accessing .id on a Decimal.
 - Event dispatch uses SELECT FOR UPDATE SKIP LOCKED; travel completion is state-checked and idempotent after handler commit/job completion failure.
 - Migration 0008_expand_ledger_account_code widens ledger_accounts.code from 64 to 128 because wallet account identifiers contain two full UUIDs.
-- PostgreSQL concurrency smoke test verifies different payroll keys cannot overdraw a business and duplicate keys credit the employee exactly once.
+- PostgreSQL concurrency smoke tests verify different payroll keys cannot overdraw a business, duplicate keys credit the employee exactly once, and four concurrent workers claim/complete 24 queued jobs without duplicate or lost claims.
 
 Limits / pending:
 - Actual Supabase remains last verified at revision 0004; apply migrations 0005–0008 with the migration identity, then verify runtime-role access to worker_heartbeats, operational_metric_snapshots and business_payroll_payments before enabling heartbeat/metrics publishing there.
 - Real Alertmanager webhook delivery has not been tested; no external receiver is configured.
-- Worker business-payroll/event-dispatch/travel-completion retry integration and PostgreSQL payroll concurrency are CI verified; these have not yet been exercised against the actual Supabase project.
+- Worker business-payroll/event-dispatch/travel-completion retry integration, PostgreSQL payroll concurrency and atomic job-claim concurrency are CI verified; these have not yet been exercised against the actual Supabase project.
 - Broader queue throughput/load, multi-worker recovery and hosted database restart/failure recovery remain unverified.
 - Supabase service/database restart and disaster recovery were not tested.
 - Backup/PITR and CA/hostname certificate validation remain deferred.

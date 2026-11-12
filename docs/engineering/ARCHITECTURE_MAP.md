@@ -18,14 +18,14 @@ Authoritative persistent state:
 - migrations/versions/0008_expand_ledger_account_code.py — ledger account code capacity for full UUID wallet references
 - tests/ — unit, integration, API, monitoring, reliability and production-audit regression coverage
 - scripts/postgres_smoke.py — PostgreSQL schema and committed persistence smoke check
-- scripts/postgres_worker_concurrency_smoke.py — PostgreSQL row-lock and payroll idempotency concurrency smoke check
+- scripts/postgres_worker_concurrency_smoke.py — PostgreSQL payroll row-lock/idempotency and atomic multi-worker job-claim concurrency smoke checks
 - Dockerfile / docker-compose.yml — portable API, worker, migration and optional monitoring topology
 - monitoring/prometheus.yml, monitoring/alert_rules.yml, monitoring/alertmanager.yml — authenticated scrape, operational alert rules and generic webhook delivery
 - docs/operations/OBSERVABILITY.md — health probes, metric semantics, monitoring setup and alerting limits
 
 Dependency direction: Core/Domain → Application → Infrastructure/API/Clients.
 Database deployment: local SQLite for development and isolated tests; PostgreSQL for production. Supabase is accessed only by backend SQLAlchemy connections, not client-side Supabase SDK/Data API. Runtime credentials must use a restricted DB role.
-Background flow: enqueue → persistent queued state → atomic conditional claim → leased running state → domain handler → completed OR retry/dead-letter → audit/logging and process-local outcome metrics.
+Background flow: enqueue → persistent queued state → atomic conditional claim (conditional UPDATE compare-and-swap) → leased running state → domain handler → completed OR retry/dead-letter → audit/logging and process-local outcome metrics.
 API health: /health/live checks process liveness without database access; /health/ready checks database readiness; /health remains a compatibility alias for readiness.
 Metrics flow: API/worker process-local counters → independent-session periodic snapshot → operational_metric_snapshots → one authenticated API exporter → Prometheus → alert rules → optional Alertmanager generic webhook. Snapshots are operational telemetry, not authoritative simulation state or a historical time-series store.
 Monitoring is opt-in. The worker publishes snapshots but does not expose the exporter or receive the bearer token. Prometheus/Alertmanager ports bind to localhost in the Compose profile. Real alert delivery is unverified until a receiver is configured and delivery is tested.

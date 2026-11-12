@@ -50,3 +50,7 @@
 - Replaced datetime.utcnow model defaults with timezone-aware UTC defaults; only the Starlette/httpx TestClient deprecation remains.
 - Verified CI run 43124375294 on commit 153a3282376df988377babb5c070e028c14e599c: Ruff format/lint PASS, pytest 65 passed with 1 warning, SQLite/PostgreSQL migrations PASS, PostgreSQL persistence/payroll concurrency smoke PASS, promtool/amtool validation PASS, Docker Compose config PASS and Docker build PASS.
 - Hosted Supabase remains at revision 0004; migrations 0005–0008 and runtime grants, authenticated scrape and actual webhook delivery remain pending. Backup/PITR and CA/hostname validation remain deferred.
+
+2026-11-12
+- Extended PostgreSQL concurrency smoke coverage to persistent background jobs: four concurrent workers claimed and completed 24 queued jobs without duplicate or lost claims.
+- Verified CI run 43125062636 on commit e8abece630c19df10db3d12302e89934a698d5aa: Ruff format/lint PASS, pytest 65 passed with 1 Starlette/httpx warning, SQLite/PostgreSQL migrations PASS, PostgreSQL persistence/payroll/job-claim concurrency smoke PASS, promtool/amtool validation PASS, Docker Compose config PASS and Docker build PASS.
