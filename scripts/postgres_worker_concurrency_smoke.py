@@ -1,12 +1,14 @@
 """Verify PostgreSQL row locking and idempotent payroll under concurrency."""
 
 from concurrent.futures import ThreadPoolExecutor
+import time
 from decimal import Decimal
 from uuid import uuid4
 
 from sqlalchemy import delete, func, select
 
 from lifeverse.db import SessionLocal, engine
+from lifeverse.jobs import JobRecord, JobService
 from lifeverse.models import (
     Account,
     AuditLog,
@@ -33,6 +35,8 @@ def main() -> None:
     owner_username = f"pg-payroll-owner-{suffix}"
     employee_username = f"pg-payroll-employee-{suffix}"
     business_ids = []
+    queue_job_ids = []
+    queue_job_keys = []
     account_usernames = [owner_username, employee_username]
     city_id = None
     country_id = None
@@ -183,7 +187,68 @@ def main() -> None:
             if payment_count != 2:
                 raise RuntimeError(f"Expected two unique payroll ledger rows, got {payment_count}")
 
-        print("PostgreSQL payroll concurrency smoke test passed")
+        with SessionLocal() as session:
+            job_service = JobService()
+            for index in range(24):
+                job = job_service.enqueue(
+                    session,
+                    "smoke.noop",
+                    {"index": index},
+                    idempotency_key=f"pg-queue-{suffix}-{index}",
+                    max_attempts=1,
+                )
+                queue_job_ids.append(job.id)
+                queue_job_keys.append(job.idempotency_key)
+
+        def claim_and_complete(worker_index):
+            service = JobService()
+            worker_id = f"pg-queue-worker-{suffix}-{worker_index}"
+            claimed = []
+            while True:
+                with SessionLocal() as session:
+                    job = service.claim(session, worker_id)
+                    if job is not None:
+                        claimed.append(job.id)
+                        service.complete(session, job.id, worker_id)
+                        continue
+                    queued_count = session.scalar(
+                        select(func.count())
+                        .select_from(JobRecord)
+                        .where(
+                            JobRecord.idempotency_key.in_(queue_job_keys),
+                            JobRecord.status == "queued",
+                        )
+                    )
+                if not queued_count:
+                    return claimed
+                time.sleep(0.01)
+
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            worker_results = list(pool.map(claim_and_complete, range(4)))
+        claimed_job_ids = [job_id for worker_result in worker_results for job_id in worker_result]
+        if len(claimed_job_ids) != len(queue_job_ids) or len(set(claimed_job_ids)) != len(
+            queue_job_ids
+        ):
+            raise RuntimeError(
+                f"Concurrent job claims were duplicated or lost: {len(claimed_job_ids)} "
+                f"claimed for {len(queue_job_ids)} queued jobs"
+            )
+
+        with SessionLocal() as session:
+            completed_jobs = session.scalar(
+                select(func.count())
+                .select_from(JobRecord)
+                .where(
+                    JobRecord.id.in_(queue_job_ids),
+                    JobRecord.status == "completed",
+                )
+            )
+            if completed_jobs != len(queue_job_ids):
+                raise RuntimeError(
+                    f"Expected {len(queue_job_ids)} completed jobs, got {completed_jobs}"
+                )
+
+        print("PostgreSQL payroll and job-claim concurrency smoke tests passed")
     finally:
         with SessionLocal() as session:
             if business_ids:
@@ -192,6 +257,8 @@ def main() -> None:
                         BusinessPayrollPayment.business_id.in_(business_ids)
                     )
                 )
+            if queue_job_ids:
+                session.execute(delete(JobRecord).where(JobRecord.id.in_(queue_job_ids)))
                 session.execute(
                     delete(AuditLog).where(
                         AuditLog.actor_id.in_([str(value) for value in business_ids])
