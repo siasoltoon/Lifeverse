@@ -22,27 +22,31 @@ Actual Supabase Session Pooler acceptance (2026-11-12, last verified at revision
 - Worker --once exit code 0; queue empty before and after; no handler invoked.
 - Client connection TLS encryption PASS; CA/hostname certificate validation deferred.
 - Backup/restore/PITR deferred.
-- Migrations 0005 and 0006 have NOT yet been applied to hosted Supabase.
+- Migrations 0005–0008 have NOT yet been applied to hosted Supabase.
 
 OBS-01 / durable worker heartbeat:
 - CI run 43119236816 on commit 22d2d8e889ef03f6a111edbe9da86731c4443df7 PASS: Ruff format/lint, pytest 46 passed, SQLite/PostgreSQL migrations, PostgreSQL persistence smoke and Docker build.
 - Existing warnings retained; no tests weakened.
 
 OBS-02 centralized metrics and monitoring:
-- CI run 43121685847 on commit 38e53d1db0eb27e27b4b588ef5062c61c5cfbff0.
-- Ruff format: PASS.
-- Ruff lint: PASS.
-- pytest: PASS — 60 passed in 3.94s.
-- SQLite Alembic migration: PASS.
-- PostgreSQL 16 Alembic migration: PASS.
+- CI run 43124375294 on commit 153a3282376df988377babb5c070e028c14e599c.
+- Ruff format/lint: PASS.
+- pytest: PASS — 65 passed in 2.80s, one Starlette/httpx TestClient deprecation warning.
+- SQLite and PostgreSQL 16 Alembic migrations: PASS.
 - PostgreSQL schema and persistence smoke: PASS.
-- Prometheus config validation with promtool: PASS.
-- Prometheus alert rule validation with promtool: PASS — 5 rules.
-- Alertmanager config validation with amtool: PASS.
-- Docker build: PASS.
-- Docker Compose config validation: PASS.
+- PostgreSQL payroll concurrency smoke: PASS.
+- Prometheus config and five alert rules validated with promtool: PASS.
+- Alertmanager config validated with amtool: PASS.
+- Docker Compose config and Docker build: PASS.
 - .env.example leaves LIFEVERSE_DATABASE_URL unset; regression assertions confirm local SQLite field default and Compose persistent /data database fallback.
-- Warnings: 46 total (one Starlette/httpx TestClient deprecation and 45 datetime.utcnow() deprecations); retained, not suppressed.
-- First monitoring-validation attempt failed because the Prometheus/Alertmanager image entrypoints were invoked as arguments. Corrected with explicit --entrypoint promtool/amtool; complete rerun passed.
+- datetime.utcnow() model-default warnings were fixed; no warnings suppressed.
 
-Still not tested: hosted Supabase migrations 0005–0006 and runtime grants, real alert webhook delivery, controlled worker business/economy handler integration against Supabase, production load/concurrency and failure/recovery, Supabase service/database restart, backup restore/PITR. Backup/PITR and CA/hostname validation remain deferred.
+OBS-03 worker-handler and payroll concurrency:
+- CI verified migrations 0007_business_payroll and 0008_expand_ledger_account_code.
+- Worker integration tests cover payroll, event dispatch and travel completion when handler state commits but job completion fails, then the job retries.
+- PostgreSQL concurrency smoke proves distinct payroll jobs cannot overdraw a business and duplicate idempotency keys cannot credit a wallet twice.
+- Payroll ledger uses unique BusinessPayrollPayment idempotency keys, row locks, dialect-native ON CONFLICT DO NOTHING and atomic business/wallet/ledger/audit updates. Legacy AuditLog keys are lazily backfilled.
+- business.payroll handler now returns the Decimal amount correctly; event dispatch uses FOR UPDATE SKIP LOCKED; travel completion is state-checked and idempotent.
+- LedgerAccount.code widened to 128 to fit wallet:{character_uuid}:{currency_uuid}.
+
+Still not tested: hosted Supabase migrations 0005–0008 and runtime grants, authenticated hosted Prometheus scrape, real alert webhook delivery, broader queue throughput/load and multi-worker failure/recovery, Supabase service/database restart, backup restore/PITR. Backup/PITR and CA/hostname validation remain deferred.

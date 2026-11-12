@@ -11,7 +11,9 @@ Post-phase operational acceptance (not a new roadmap phase):
 - OPS-DB-03 operational readiness validation: IN PROGRESS.
   - OBS-01 process-local metrics, API instrumentation, liveness/readiness and durable worker heartbeats: IMPLEMENTED and CI VERIFIED.
   - OBS-02 centralized per-process metrics snapshots, authenticated API exporter, optional Prometheus/Alertmanager Compose profile, five alert rules, and worker publisher wiring: IMPLEMENTED and CI VERIFIED.
-  - CI run 43121685847 on commit 38e53d1db0eb27e27b4b588ef5062c61c5cfbff0: Ruff format/lint PASS; pytest 60 passed; SQLite and PostgreSQL 16 migrations PASS; PostgreSQL persistence smoke PASS; Prometheus config/rules PASS; Alertmanager config PASS; Docker Compose config PASS; Docker build PASS. 46 existing deprecation warnings retained.
-  - Remaining: apply migrations 0005–0006 to actual Supabase and verify runtime grants; configure/test a real Alertmanager webhook; controlled worker-handler integration; representative load/concurrency and failure/recovery validation; hosted database restart/recovery.
+  - OBS-03 worker-handler retry safety, idempotent business payroll ledger, event dispatch row locking and travel completion retry safety: IMPLEMENTED and CI VERIFIED.
+  - Migrations 0007_business_payroll and 0008_expand_ledger_account_code add unique payroll payment persistence and widen ledger account identifiers to 128 characters.
+  - CI run 43124375294 on commit 153a3282376df988377babb5c070e028c14e599c: Ruff format/lint PASS; pytest 65 passed, 1 Starlette/httpx warning; SQLite and PostgreSQL 16 migrations PASS; PostgreSQL persistence and payroll concurrency smoke PASS; Prometheus config/rules, Alertmanager config, Docker Compose config and Docker build PASS.
+  - Remaining: apply migrations 0005–0008 to actual Supabase and verify runtime grants; configure/test a real Alertmanager webhook and authenticated hosted scrape; broader queue/load and multi-worker failure/recovery validation; hosted database restart/recovery.
   - Backup/restore/PITR and CA/hostname certificate verification remain deferred by decision.
 Production operational readiness is NOT COMPLETE. Do not declare production-ready.

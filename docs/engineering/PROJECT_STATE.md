@@ -2,7 +2,7 @@
 Repository: siasoltoon/Lifeverse
 Current phase: Phase 32 — Final Production Audit (completed and merged)
 Current task: OPS-DB-03 — operational readiness validation
-Task status: OBS-01 baseline and OBS-02 centralized metrics/monitoring implementation are CI verified. OPS-DB-03 remains IN PROGRESS; hosted Supabase migration/privilege acceptance for revisions 0005–0006, real alert receiver delivery, controlled worker-handler integration, and representative load/concurrency/failure-recovery validation remain.
+Task status: OBS-01/OBS-02 observability and centralized monitoring are CI verified. OBS-03 worker-handler retry safety and PostgreSQL payroll concurrency are CI verified. OPS-DB-03 remains IN PROGRESS; hosted Supabase migration/privilege acceptance for revisions 0005–0008, authenticated hosted scrape, real alert receiver delivery, and broader queue/load/failure-recovery validation remain.
 PR: #7 — feat(db): add PostgreSQL and Supabase Session Pooler support
 Branch: feat/postgresql-supabase-support
 PR #7 remains draft and is not merged.
@@ -21,7 +21,7 @@ Actual Supabase acceptance (2026-11-12, last verified at revision 0004_phases_26
 - Worker --once exited with code 0. The background_jobs queue was empty before and after; no business/economy handler execution was attempted.
 - TLS encryption on the client connection was verified with psycopg's pgconn.ssl_in_use. CA/hostname certificate validation is deferred by decision.
 - Backup/restore/PITR verification is deferred by user decision.
-- Important boundary: revisions 0005_worker_heartbeats and 0006_metrics_snapshots were added after this hosted acceptance. They have passed PostgreSQL 16 CI migrations, but have NOT yet been applied to the actual Supabase database.
+- Important boundary: revisions 0005_worker_heartbeats, 0006_metrics_snapshots, 0007_business_payroll and 0008_expand_ledger_account_code were added after this hosted acceptance. They have passed PostgreSQL 16 CI migrations, but have NOT yet been applied to the actual Supabase database.
 
 OBS-01 observability baseline:
 - Thread-safe process-local Metrics counters with input validation.
@@ -40,17 +40,24 @@ OBS-02 centralized metrics and monitoring implementation:
 - .env.example leaves LIFEVERSE_DATABASE_URL unset by default: local Python retains its relative SQLite default, while Docker Compose selects the persistent /data/lifeverse.db named-volume fallback. Regression coverage for this behavior passed in CI run 43121685847.
 - Alert delivery uses a generic Alertmanager-compatible webhook. Rules/configuration exist, but alerts are NOT active until a real receiver is configured and a delivery test succeeds.
 - docs/operations/OBSERVABILITY.md documents setup and operational limits.
-- CI run 43121685847 on commit 38e53d1db0eb27e27b4b588ef5062c61c5cfbff0: Ruff format PASS; Ruff lint PASS; pytest 60 passed; SQLite migration PASS; PostgreSQL 16 migration PASS; PostgreSQL persistence smoke PASS; Prometheus config PASS; Prometheus rules PASS (5 rules); Alertmanager config PASS; Docker build PASS.
-- 46 existing warnings remain visible (one Starlette/httpx TestClient deprecation and 45 datetime.utcnow() deprecations); none were suppressed and no tests were weakened.
-- An earlier CI attempt exposed incorrect Docker entrypoint invocation for promtool/amtool; the workflow was corrected to use explicit --entrypoint and the complete rerun passed.
+- CI run 43124375294 on commit 153a3282376df988377babb5c070e028c14e599c: Ruff format/lint PASS; pytest 65 passed in 2.80s with one Starlette/httpx TestClient deprecation warning; SQLite and PostgreSQL 16 migrations PASS; PostgreSQL persistence smoke PASS; PostgreSQL payroll concurrency smoke PASS; Prometheus config/rules PASS (5 rules); Alertmanager config PASS; Docker Compose config PASS; Docker build PASS. datetime.utcnow() model-default warnings were fixed; no warnings were suppressed and no tests were weakened.
+
+OBS-03 worker-handler retry safety and economic idempotency:
+- Migration 0007_business_payroll_payments adds a durable payroll payment ledger with a unique idempotency key and restrictive audit-preserving foreign keys.
+- Business payroll locks the business/employee/wallet rows, inserts a unique ledger row with dialect-native ON CONFLICT DO NOTHING, and commits business balance, employee wallet, payment ledger and audit record atomically.
+- Legacy payroll AuditLog entries are lazily imported into the new ledger so a pre-deployment job retry cannot pay the same employee again.
+- business.payroll worker handler now returns the payroll amount rather than incorrectly accessing .id on a Decimal.
+- Event dispatch uses SELECT FOR UPDATE SKIP LOCKED; travel completion is state-checked and idempotent after handler commit/job completion failure.
+- Migration 0008_expand_ledger_account_code widens ledger_accounts.code from 64 to 128 because wallet account identifiers contain two full UUIDs.
+- PostgreSQL concurrency smoke test verifies different payroll keys cannot overdraw a business and duplicate keys credit the employee exactly once.
 
 Limits / pending:
-- Actual Supabase remains last verified at revision 0004; apply migrations 0005 and 0006 with the migration identity, then verify runtime-role access to both new tables before enabling heartbeat/metrics publishing there.
+- Actual Supabase remains last verified at revision 0004; apply migrations 0005–0008 with the migration identity, then verify runtime-role access to worker_heartbeats, operational_metric_snapshots and business_payroll_payments before enabling heartbeat/metrics publishing there.
 - Real Alertmanager webhook delivery has not been tested; no external receiver is configured.
-- No controlled real worker business/economy handler integration test has been run against Supabase.
-- Production load/concurrency and failure/recovery behavior remain unverified.
+- Worker business-payroll/event-dispatch/travel-completion retry integration and PostgreSQL payroll concurrency are CI verified; these have not yet been exercised against the actual Supabase project.
+- Broader queue throughput/load, multi-worker recovery and hosted database restart/failure recovery remain unverified.
 - Supabase service/database restart and disaster recovery were not tested.
 - Backup/PITR and CA/hostname certificate validation remain deferred.
 Production readiness is NOT ESTABLISHED. Do not declare production-ready.
 
-Exact next action: apply and verify migrations 0005–0006 on actual Supabase with the admin migration identity; audit least-privilege runtime grants for worker_heartbeats and operational_metric_snapshots; then verify authenticated Prometheus scrape and a real alert webhook delivery. After that, run controlled worker-handler integration and representative load/concurrency/failure-recovery tests. Keep backup/PITR and CA/hostname validation deferred unless the user reopens those decisions.
+Exact next action: after syncing the GitHub branch to the local laptop, apply and verify migrations 0005–0008 on actual Supabase with the admin migration identity; audit least-privilege runtime grants for worker_heartbeats, operational_metric_snapshots and business_payroll_payments; then verify authenticated Prometheus scrape and a real alert webhook delivery. After that, run broader queue/load and multi-worker failure/recovery tests. Keep backup/PITR and CA/hostname validation deferred unless the user reopens those decisions.

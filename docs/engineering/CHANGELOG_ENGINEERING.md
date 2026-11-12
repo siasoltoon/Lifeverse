@@ -40,3 +40,13 @@
 - Remaining OPS-DB-03: apply migrations 0005–0006 to actual Supabase and verify runtime grants, configure/test real webhook delivery, controlled worker-handler integration, representative load/concurrency/failure recovery and hosted DB restart/recovery. Backup/PITR and CA/hostname validation remain deferred.
 
 - Deployment hardening: .env.example leaves LIFEVERSE_DATABASE_URL unset by default, preserving the local Python SQLite default while allowing Docker Compose to select its persistent /data/lifeverse.db named-volume fallback. Regression assertions for the example and Compose DB paths are included in the 60-test CI run 43121685847 (Docker Compose config validation also PASS).
+
+2026-11-12
+- OBS-03: fixed business payroll worker result handling; added BusinessPayrollPayment with a unique idempotency key and atomic payroll ledger/wallet/business/audit transaction.
+- Added lazy legacy payroll AuditLog backfill so pending pre-migration jobs cannot repay already-settled employees.
+- Added row-level locks for payroll, SELECT FOR UPDATE SKIP LOCKED for event dispatch, and idempotent state/origin checks for travel completion.
+- Added migration 0007_business_payroll_payments and migration 0008_expand_ledger_account_code; widened LedgerAccount.code to 128 because full UUID wallet account codes exceed the old 64-character limit.
+- Added worker retry integration tests and a PostgreSQL concurrency smoke test covering distinct payroll keys with insufficient funds and duplicate idempotency keys.
+- Replaced datetime.utcnow model defaults with timezone-aware UTC defaults; only the Starlette/httpx TestClient deprecation remains.
+- Verified CI run 43124375294 on commit 153a3282376df988377babb5c070e028c14e599c: Ruff format/lint PASS, pytest 65 passed with 1 warning, SQLite/PostgreSQL migrations PASS, PostgreSQL persistence/payroll concurrency smoke PASS, promtool/amtool validation PASS, Docker Compose config PASS and Docker build PASS.
+- Hosted Supabase remains at revision 0004; migrations 0005–0008 and runtime grants, authenticated scrape and actual webhook delivery remain pending. Backup/PITR and CA/hostname validation remain deferred.
